@@ -1,0 +1,17 @@
+# Ovisnosti (jako puno malih fajlova, instaliraju se pomoću npm install)
+node_modules/
+
+# Fajl s lokalnim osjetljivim podacima (lozinke, ključevi)
+.env
+
+# Log fajlovi (ako ih budeš generirao)
+*.log
+
+# Mac sistemski fajl
+.DS_Store
+
+# Windows thumbnail cache
+Thumbs.db
+
+# VS Code folder (opcionalno)
+.vscode/

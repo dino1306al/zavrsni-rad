@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upravljanje Budžetima</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .okvir {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+
+    .zaglavlje {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .odabir-mjeseca {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+
+    .akcije {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .dodaj-gumb {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .uredi-gumb {
+      background-color: #ffc107;
+      color: #212529;
+    }
+
+    .obrisi-gumb {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .natrag-gumb {
+      background-color: #6c757d;
+      color: white;
+    }
+
+    .forma-okvir {
+      background-color: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-top: 2rem;
+    }
+
+    .forma-grupa {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+
+    .sakriveno {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="okvir">
+    <div class="zaglavlje">
+      <h1>Upravljanje Budžetima</h1>
+      <button class="natrag-gumb" onclick="window.location.href='dashboard.html'">&larr; Povratak</button>
+    </div>
+
+    <div class="odabir-mjeseca">
+      <label for="mjesec">Odaberi mjesec:</label>
+      <input type="month" id="mjesec" onchange="ucitajBudzete()">
+      <button class="dodaj-gumb" onclick="prikaziFormuDodavanja()">+ Dodaj Budžet</button>
+    </div>
+
+    <div id="tablicaBudzeta">
+      <table>
+        <thead>
+          <tr>
+            <th>Kategorija</th>
+            <th>Iznos (€)</th>
+            <th>Akcije</th>
+          </tr>
+        </thead>
+        <tbody id="listaBudzeta"></tbody>
+      </table>
+    </div>
+
+    <div id="formaDodavanja" class="forma-okvir sakriveno">
+      <h2 id="naslovForme">Dodaj Novi Budžet</h2>
+      <form id="formaBudzeta">
+        <div class="forma-grupa">
+          <label for="kategorija">Kategorija</label>
+          <select id="kategorija" required>
+            <option value="">Odaberi kategoriju</option>
+            <option value="Hrana">Hrana</option>
+            <option value="Stanovanje">Stanovanje</option>
+            <option value="Prijevoz">Prijevoz</option>
+            <option value="Zabava">Zabava</option>
+            <option value="Obrazovanje">Obrazovanje</option>
+            <option value="Ostalo">Ostalo</option>
+          </select>
+        </div>
+
+        <div class="forma-grupa">
+          <label for="iznos">Iznos (€)</label>
+          <input type="number" step="0.01" id="iznos" required>
+        </div>
+
+        <div class="akcije">
+          <button type="submit" class="dodaj-gumb">Spremi</button>
+          <button type="button" class="natrag-gumb" onclick="sakrijFormuDodavanja()">Odustani</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let trenutniMjesec = '';
+    let modUredivanja = false;
+    let idZaUredivanje = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const sada = new Date();
+      trenutniMjesec = `${sada.getFullYear()}-${String(sada.getMonth() + 1).padStart(2, '0')}`;
+      document.getElementById('mjesec').value = trenutniMjesec;
+      ucitajBudzete();
+    });
+
+    async function ucitajBudzete() {
+      try {
+        const token = localStorage.getItem('token');
+        const korisnikId = localStorage.getItem('userId');
+        trenutniMjesec = document.getElementById('mjesec').value;
+
+        if (!token || !korisnikId) {
+          alert('Niste prijavljeni!');
+          window.location.href = 'login.html';
+          return;
+        }
+
+        const odgovor = await fetch(`http://localhost:3000/budgets?user_id=${korisnikId}&month=${trenutniMjesec}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!odgovor.ok) {
+          throw new Error('Greška pri učitavanju budžeta');
+        }
+
+        const budzeti = await odgovor.json();
+        prikaziBudzete(budzeti);
+      } catch (greska) {
+        console.error(greska);
+        alert(greska.message);
+      }
+    }
+
+    function prikaziBudzete(budzeti) {
+      const lista = document.getElementById('listaBudzeta');
+      lista.innerHTML = '';
+
+      if (budzeti.length === 0) {
+        lista.innerHTML = `
+          <tr>
+            <td colspan="3" style="text-align: center;">
+              Nema budžeta za odabrani mjesec. <a href="#" onclick="prikaziFormuDodavanja()">Dodajte novi budžet</a>.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      budzeti.forEach(b => {
+        const red = document.createElement('tr');
+        red.innerHTML = `
+          <td>${b.category}</td>
+          <td>${parseFloat(b.amount).toFixed(2)} €</td>
+          <td class="akcije">
+            <button class="uredi-gumb" onclick="urediBudzet(${b.id}, '${b.category}', ${b.amount})">Uredi</button>
+            <button class="obrisi-gumb" onclick="obrisiBudzet(${b.id})">Obriši</button>
+          </td>
+        `;
+        lista.appendChild(red);
+      });
+    }
+
+    function prikaziFormuDodavanja(uredi = false, id = null, kategorija = '', iznos = '') {
+      modUredivanja = uredi;
+      idZaUredivanje = id;
+
+      const forma = document.getElementById('formaDodavanja');
+      const naslov = document.getElementById('naslovForme');
+      const odabirKategorije = document.getElementById('kategorija');
+      const poljeIznos = document.getElementById('iznos');
+      const gumbSpremi = forma.querySelector('button[type="submit"]');
+
+      if (modUredivanja) {
+        naslov.textContent = 'Uredi Budžet';
+        gumbSpremi.textContent = 'Ažuriraj';
+        odabirKategorije.value = kategorija;
+        poljeIznos.value = iznos;
+      } else {
+        naslov.textContent = 'Dodaj Novi Budžet';
+        gumbSpremi.textContent = 'Spremi';
+        odabirKategorije.value = '';
+        poljeIznos.value = '';
+      }
+
+      document.getElementById('tablicaBudzeta').classList.add('sakriveno');
+      forma.classList.remove('sakriveno');
+    }
+
+    function sakrijFormuDodavanja() {
+      document.getElementById('formaDodavanja').classList.add('sakriveno');
+      document.getElementById('tablicaBudzeta').classList.remove('sakriveno');
+      modUredivanja = false;
+      idZaUredivanje = null;
+    }
+
+    document.getElementById('formaBudzeta').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const token = localStorage.getItem('token');
+      const korisnikId = localStorage.getItem('userId');
+      const kategorija = document.getElementById('kategorija').value;
+      const iznos = document.getElementById('iznos').value;
+
+      if (!kategorija || !iznos) {
+        alert('Molimo popunite sva polja!');
+        return;
+      }
+
+      try {
+        let odgovor;
+
+        if (modUredivanja) {
+          odgovor = await fetch(`http://localhost:3000/budgets/${idZaUredivanje}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              amount: iznos,
+              user_id: korisnikId
+            })
+          });
+        } else {
+          odgovor = await fetch('http://localhost:3000/budgets', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              category: kategorija,
+              amount: iznos,
+              month: trenutniMjesec,
+              user_id: korisnikId
+            })
+          });
+        }
+
+        if (!odgovor.ok) {
+          throw new Error(modUredivanja ? 'Greška pri ažuriranju budžeta' : 'Greška pri dodavanju budžeta');
+        }
+
+        sakrijFormuDodavanja();
+        ucitajBudzete();
+      } catch (greska) {
+        console.error(greska);
+        alert(greska.message);
+      }
+    });
+
+    function urediBudzet(id, kategorija, iznos) {
+      prikaziFormuDodavanja(true, id, kategorija, iznos);
+    }
+
+    async function obrisiBudzet(id) {
+      if (!confirm('Jeste li sigurni da želite obrisati ovaj budžet?')) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        const korisnikId = localStorage.getItem('userId');
+
+        const odgovor = await fetch(`http://localhost:3000/budgets/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: korisnikId
+          })
+        });
+
+        if (!odgovor.ok) {
+          throw new Error('Greška pri brisanju budžeta');
+        }
+
+        ucitajBudzete();
+      } catch (greska) {
+        console.error(greska);
+        alert(greska.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Troškovi</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+    
+    .form-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .recurring-options {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .expense-list {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .expense-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem 0;
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+    
+    .expense-item:last-child {
+      border-bottom: none;
+    }
+    
+    .expense-info {
+      flex: 1;
+    }
+    
+    .expense-amount {
+      font-weight: bold;
+      color: var(--danger);
+    }
+    
+    .expense-date {
+      color: var(--gray-dark);
+      font-size: 0.9rem;
+    }
+    
+    .expense-description {
+      color: #666;
+    }
+    
+    .expense-category {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      background: #f1c40f;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      color: #333;
+    }
+    
+    .expense-actions {
+      margin-left: 1rem;
+    }
+    
+    .recurring-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      background: #9b59b6;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      color: white;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Upravljanje troškovima</h1>
+      <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">← Povratak</button>
+    </div>
+    
+    <div class="form-container">
+      <h2>Dodaj novi trošak</h2>
+      <form id="expenseForm">
+        <div class="form-group">
+          <label for="amount">Iznos (€)</label>
+          <input type="number" step="0.01" id="amount" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="category">Kategorija</label>
+          <select id="category" class="form-control" required>
+            <option value="">Odaberi kategoriju</option>
+            <option value="Hrana">Hrana</option>
+            <option value="Stanovanje">Stanovanje</option>
+            <option value="Režije">Režije</option>
+            <option value="Prijevoz">Prijevoz</option>
+            <option value="Odjeća i obuća">Odjeća i obuća</option>
+            <option value="Zdravlje">Zdravlje</option>
+            <option value="Zabava">Zabava</option>
+            <option value="Obrazovanje">Obrazovanje</option>
+            <option value="Dugovi">Dugovi</option>
+            <option value="Pokloni">Pokloni</option>
+            <option value="Ljubimci">Ljubimci</option>
+            <option value="Ostalo">Ostalo</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="description">Opis (opcionalno)</label>
+          <input type="text" id="description" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label for="date">Datum</label>
+          <input type="date" id="date" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="isRecurring"> Ponavljajući trošak
+          </label>
+        </div>
+        
+        <div class="recurring-options" id="recurringOptions">
+          <div class="form-group">
+            <label for="recurrenceInterval">Interval ponavljanja</label>
+            <select id="recurrenceInterval" class="form-control">
+              <option value="monthly">Mjesečno</option>
+              <option value="weekly">Tjedno</option>
+              <option value="yearly">Godišnje</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="recurrenceEndDate">Završni datum (opcionalno)</label>
+            <input type="date" id="recurrenceEndDate" class="form-control">
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-danger">Dodaj trošak</button>
+      </form>
+    </div>
+    
+    <div class="expense-list">
+      <h2>Tvoji troškovi</h2>
+      <div id="expensesList"></div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      
+      if (!token || !userId) {
+        alert('Niste prijavljeni!');
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      // Postavi današnji datum kao default
+      document.getElementById('date').valueAsDate = new Date();
+      
+      // Prikaži/sakrij opcije za ponavljajuće troškove
+      document.getElementById('isRecurring').addEventListener('change', function() {
+        document.getElementById('recurringOptions').style.display = 
+          this.checked ? 'block' : 'none';
+      });
+      
+      fetchExpenses();
+    });
+
+    async function fetchExpenses() {
+      try {
+        const response = await fetch(`http://localhost:3000/expenses?user_id=${localStorage.getItem('userId')}`, {
+          headers: getAuthHeader()
+        });
+        
+        if (!response.ok) {
+          throw new Error('Greška pri dohvaćanju troškova');
+        }
+        
+        const expenses = await response.json();
+        displayExpenses(expenses);
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      }
+    }
+
+    function displayExpenses(expenses) {
+      const expensesList = document.getElementById('expensesList');
+      
+      if (expenses.length === 0) {
+        expensesList.innerHTML = '<p>Nema unesenih troškova.</p>';
+        return;
+      }
+      
+      expensesList.innerHTML = '';
+      
+      expenses.forEach(expense => {
+        const expenseItem = document.createElement('div');
+        expenseItem.className = 'expense-item';
+        
+        const formattedDate = new Date(expense.date).toLocaleDateString('hr-HR');
+        const formattedAmount = parseFloat(expense.amount).toFixed(2) + ' €';
+        
+        expenseItem.innerHTML = `
+          <div class="expense-info">
+            <div>
+              <span class="expense-category">${expense.category}</span>
+              ${expense.is_recurring ? '<span class="recurring-badge">Ponavljajući</span>' : ''}
+              <span class="expense-amount">${formattedAmount}</span>
+            </div>
+            <div class="expense-date">${formattedDate}</div>
+            ${expense.description ? `<div class="expense-description">${expense.description}</div>` : ''}
+          </div>
+          <div class="expense-actions">
+            <button class="btn btn-danger" onclick="deleteExpense(${expense.id})">Obriši</button>
+          </div>
+        `;
+        
+        expensesList.appendChild(expenseItem);
+      });
+    }
+
+    document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const amount = document.getElementById('amount').value;
+      const category = document.getElementById('category').value;
+      const description = document.getElementById('description').value;
+      const date = document.getElementById('date').value;
+      const isRecurring = document.getElementById('isRecurring').checked;
+      const recurrenceInterval = isRecurring ? document.getElementById('recurrenceInterval').value : null;
+      const recurrenceEndDate = isRecurring ? document.getElementById('recurrenceEndDate').value : null;
+      
+      try {
+        const response = await fetch('http://localhost:3000/expenses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            user_id: localStorage.getItem('userId'),
+            amount,
+            category,
+            description,
+            date,
+            is_recurring: isRecurring,
+            recurrence_interval: recurrenceInterval,
+            recurrence_end_date: recurrenceEndDate
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Greška pri dodavanju troška');
+        }
+        
+        // Očisti formu i osvježi listu
+        document.getElementById('expenseForm').reset();
+        document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('recurringOptions').style.display = 'none';
+        fetchExpenses();
+        
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      }
+    });
+
+    async function deleteExpense(id) {
+      if (!confirm('Jeste li sigurni da želite obrisati ovaj trošak?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`http://localhost:3000/expenses/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeader()
+        });
+        
+        if (!response.ok) {
+          throw new Error('Greška pri brisanju troška');
+        }
+        
+        fetchExpenses();
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+dokumentacija
+TEZE
+1)UVOD
+2)OPIS FRONTEND - HTML, CSS 
+3)OPIS BACKEND - PHP, MYSQL
+4)NAČIN IZRADE
+5)FUNKCIONALNOST RADA
+6)ZAKLJUČAK
+
+
+tema: Web aplikacija za vođenje osobnih financija
+
+Opis: Aplikacija koja omogućava korisnicima praćenje prihoda i troškova, kreiranje budžeta i prikaz statistike kroz grafove. 
+Aplikacija bi mogla imati autentifikaciju korisnika i pohranu podataka na serveru.  
+
+Tehnologije: HTML, CSS, JavaScript, Node.js/Express, MySQL. 
+
+
+# Web Aplikacija za Vođenje Osobnih Financija - Završni Rad
+
+## Uvod
+
+Izradio sam web aplikaciju za vođenje osobnih financija kao završni rad za 4. razred Tehničke škole Ruđera Boškovića u Zagrebu, smjer tehničar za računalstvo. Aplikacija omogućava korisnicima praćenje prihoda i troškova, kreiranje budžeta i vizualizaciju financijskih podataka kroz različite grafikone.
+
+## Tehnologije
+
+Koristio sam sljedeće tehnologije:
+- **Frontend**: HTML, CSS, JavaScript
+- **Backend**: Node.js s Express frameworkom
+- **Baza podataka**: MySQL
+- **Dodatne biblioteke**: Chart.js za vizualizaciju podataka, bcrypt za hashiranje lozinki, jsonwebtoken za autentifikaciju
+
+## Funkcionalnosti
+
+Aplikacija nudi sljedeće funkcionalnosti:
+
+1. **Autentifikacija korisnika**
+   - Registracija novih korisnika
+   - Prijava postojećih korisnika
+   - Sigurna pohrana lozinki (hashiranje)
+
+2. **Upravljanje financijama**
+   - Unos prihoda i troškova
+   - Kategorizacija transakcija
+   - Ponavljajući prihodi i troškovi
+
+3. **Budžetiranje**
+   - Postavljanje mjesečnih budžeta po kategorijama
+   - Praćenje potrošnje u odnosu na budžet
+
+4. **Statistika i vizualizacija**
+   - Pregled ukupnih financija (saldo, prihodi, troškovi)
+   - Grafički prikaz podataka
+   - Mjesečna usporedba
+
+## Struktura projekta
+
+Projekt je organiziran u tri glavna dijela:
+
+### 1. Frontend
+- HTML stranice za korisničko sučelje
+- CSS za stilizaciju
+- JavaScript za interakciju s korisnikom i komunikaciju s backendom
+
+### 2. Backend
+- Node.js server s Express frameworkom
+- REST API za komunikaciju s frontendom
+- Autentifikacija korisnika putem JWT tokena
+
+### 3. Baza podataka
+- MySQL baza podataka s četiri glavne tablice:
+  - `users` - korisnički podaci
+  - `income` - prihodi
+  - `expenses` - troškovi
+  - `budgets` - budžeti
+
+## Instalacija i pokretanje
+
+1. Instalirati Node.js i MySQL
+2. Pokrenuti XAMPP i aktivirati MySQL server
+3. Importirati SQL skriptu za kreiranje baze podataka
+4. Instalirati potrebne npm pakete:
+   ```
+   npm install express mysql2 bcrypt jsonwebtoken dotenv cors
+   ```
+5. Konfigurirati `.env` datoteku s podacima za bazu
+6. Pokrenuti server:
+   ```
+   node app.js
+   ```
+
+## Zaključak
+
+Kroz ovaj projekt uspio sam implementirati funkcionalnu web aplikaciju za praćenje osobnih financija koja zadovoljava sve postavljene zahtjeve. Aplikacija je responzivna, sigurna i jednostavna za korištenje. Najveći izazov bio je osigurati ispravnu komunikaciju između frontenda, backend-a i baze podataka, ali kroz iterativni proces testiranja i debugiranja uspio sam postići stabilno funkcioniranje cijelog sustava.
+
+Ova aplikacija može poslužiti kao dobra osnova za daljnji razvoj s dodatnim funkcionalnostima kao što su izvještaji, alati za planiranje štednje ili integracija s bankovnim sustavima.
+
+
+

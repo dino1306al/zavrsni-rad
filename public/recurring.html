@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ponavljajući Troškovi i Prihodi</title>
+  <style>
+    /* Osnovni stilovi za funkcionalnost - preuzeto iz vašeg primjera */
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+        color: #333;
+    }
+    .btn {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 5px;
+        text-decoration: none; /* Za linkove koji izgledaju kao gumbi */
+        display: inline-block; /* Za pravilno poravnanje */
+    }
+    .btn-primary { background-color: #007bff; color: white; }
+    .btn-secondary { background-color: #6c757d; color: white; }
+    .btn-danger { background-color: #dc3545; color: white; }
+    .btn-warning { background-color: #ffc107; color: black; }
+    .btn-success {
+      background-color: #28a745;
+      color: white;
+    }
+    .btn-success:hover {
+       background-color: #218838;
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: #f5f5f5;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+      transition: background-color 0.3s ease;
+    }
+
+    .tab.active {
+      background: white;
+      border-color: #ddd;
+      border-bottom-color: white;
+      font-weight: bold;
+    }
+
+    .tab:hover:not(.active) {
+        background-color: #eee;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 20px;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .recurring-item {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      border-left: 4px solid #3498db;
+    }
+
+    .recurring-item.expense {
+      border-left-color: #e74c3c; /* Crvena za troškove */
+    }
+
+    .recurring-item.income {
+      border-left-color: #2ecc71; /* Zelena za prihode */
+    }
+
+    .recurring-item h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #555;
+    }
+     .recurring-item p {
+        margin: 5px 0;
+        font-size: 14px;
+        color: #666;
+    }
+     .recurring-item p strong {
+        color: #444;
+    }
+
+    .recurring-actions {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow-y: auto; /* Omogućava skrolanje ako je sadržaj predug */
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 8% auto; /* Malo podignuto */
+      padding: 25px;
+      border-radius: 5px;
+      width: 90%;
+      max-width: 550px; /* Malo uže */
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 25px; /* Malo veći razmak */
+      border-top: 1px solid #eee; /* Linija iznad gumba */
+      padding-top: 15px; /* Razmak iznad gumba */
+    }
+
+    .mt-3 {
+      margin-top: 1rem;
+    }
+
+    .alert {
+      padding: 15px; /* Malo veći padding */
+      margin-bottom: 20px; /* Malo veći razmak */
+      border-radius: 4px;
+      border: 1px solid transparent;
+      font-weight: 500;
+    }
+
+    .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+      border-color: #c3e6cb;
+    }
+
+    .alert-error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-color: #f5c6cb;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px; /* Malo veći padding */
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box; /* Da padding ne širi element */
+      font-size: 14px;
+    }
+    .form-control:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+    select.form-control {
+        appearance: none; /* Sakrij default strelicu */
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E"); /* Dodaj custom strelicu */
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 1em;
+        padding-right: 30px; /* Napravi mjesta za strelicu */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ponavljajući Troškovi i Prihodi</h1>
+    <button class="btn btn-secondary" style="margin-bottom: 15px;" onclick="window.location.href='dashboard.html'">← Povratak</button>
+
+    <div id="alertContainer"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="expenses">Troškovi</div>
+      <div class="tab" data-tab="income">Prihodi</div>
+    </div>
+
+    <div id="expensesTab" class="tab-content active">
+      <h2>Ponavljajući Troškovi</h2>
+      <button class="btn btn-danger" onclick="showAddForm('expense')">+ Dodaj Ponavljajući Trošak</button>
+      <div id="expensesList" class="mt-3">
+          <p>Učitavanje troškova...</p>
+      </div>
+    </div>
+
+    <div id="incomeTab" class="tab-content">
+      <h2>Ponavljajući Prihodi</h2>
+      <button class="btn btn-success" onclick="showAddForm('income')">+ Dodaj Ponavljajući Prihod</button> <div id="incomeList" class="mt-3">
+          <p>Učitavanje prihoda...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="recurringModal" class="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle">Dodaj Ponavljajući Trošak</h2>
+      <form id="recurringForm">
+        <input type="hidden" id="itemType">
+        <input type="hidden" id="itemId">
+
+        <div class="form-group">
+          <label for="amount">Iznos (€) *</label>
+          <input type="number" step="0.01" id="amount" class="form-control" required placeholder="Unesite iznos">
+        </div>
+
+        <div class="form-group" id="categoryGroup">
+          <label for="category">Kategorija *</label>
+          <select id="category" class="form-control" required>
+            <option value="">Odaberi kategoriju</option>
+            <option value="Hrana">Hrana</option>
+            <option value="Stanovanje">Stanovanje</option>
+            <option value="Režije">Režije</option>
+            <option value="Prijevoz">Prijevoz</option>
+            <option value="Odjeća i obuća">Odjeća i obuća</option>
+            <option value="Zdravlje">Zdravlje</option>
+            <option value="Zabava">Zabava</option>
+            <option value="Obrazovanje">Obrazovanje</option>
+            <option value="Dugovi">Dugovi</option>
+            <option value="Pokloni">Pokloni</option>
+            <option value="Ljubimci">Ljubimci</option>
+            <option value="Ostalo">Ostalo</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Opis (opcionalno)</label>
+          <input type="text" id="description" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="startDate">Početni datum *</label>
+          <input type="date" id="startDate" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="interval">Interval ponavljanja *</label>
+          <select id="interval" class="form-control" required>
+            <option value="">Odaberi interval</option>
+            <option value="daily">Dnevno</option>
+            <option value="weekly">Tjedno</option>
+            <option value="monthly">Mjesečno</option>
+            <option value="yearly">Godišnje</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="endDate">Završni datum (opcionalno)</label>
+          <input type="date" id="endDate" class="form-control">
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="hideModal()">Odustani</button>
+          <button type="submit" class="btn btn-primary">Spremi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    // Helper funkcija za dohvaćanje auth headera (pretpostavka iz auth.js)
+    function getAuthHeader() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error("Token nije pronađen.");
+            // Ovdje eventualno preusmjeriti na login
+            // window.location.href = 'login.html';
+            return {};
+        }
+        return { 'Authorization': `Bearer ${token}` };
+    }
+
+    // Helper funkcija za provjeru autentifikacije (pretpostavka iz auth.js)
+    function checkAuth() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.warn("Korisnik nije prijavljen. Preusmjeravam na login.");
+            // window.location.href = 'login.html'; // Odkomentirajte za automatsko preusmjeravanje
+            return false;
+        }
+        return true;
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!checkAuth()) return;
+
+      // Postavi današnji datum kao default za početni datum
+       try {
+         document.getElementById('startDate').valueAsDate = new Date();
+       } catch(e) {
+         console.error("Greška pri postavljanju datuma:", e);
+         // Fallback ako valueAsDate nije podržan ili ne radi
+         const today = new Date();
+         const year = today.getFullYear();
+         const month = String(today.getMonth() + 1).padStart(2, '0');
+         const day = String(today.getDate()).padStart(2, '0');
+         document.getElementById('startDate').value = `${year}-${month}-${day}`;
+       }
+
+      // Tab funkcionalnost
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+          tab.classList.add('active');
+          const activeTabContent = document.getElementById(`${tab.dataset.tab}Tab`);
+          if (activeTabContent) {
+            activeTabContent.classList.add('active');
+
+             // Učitaj podatke za aktivni tab
+             if (tab.dataset.tab === 'expenses') {
+               loadRecurringExpenses();
+             } else if (tab.dataset.tab === 'income') {
+               loadRecurringIncome();
+             }
+          } else {
+              console.error(`Tab content for ${tab.dataset.tab} not found.`);
+          }
+        });
+      });
+
+      // Učitaj početne podatke (za tab koji je inicijalno aktivan)
+      loadRecurringExpenses();
+    });
+
+    function showAlert(message, type = 'success') {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type}`;
+      alertDiv.textContent = message;
+      // Dodaj gumb za zatvaranje
+      const closeButton = document.createElement('button');
+      closeButton.innerHTML = '&times;'; // HTML entitet za 'x'
+      closeButton.style.cssText = 'float:right; background:none; border:none; font-size: 1.2em; line-height: 1; cursor:pointer; margin-left: 15px;';
+      closeButton.onclick = () => alertDiv.remove();
+      alertDiv.appendChild(closeButton);
+
+
+      const container = document.getElementById('alertContainer');
+      // Ukloni postojeće poruke prije dodavanja nove
+      while (container.firstChild) {
+           container.removeChild(container.firstChild);
+       }
+      container.appendChild(alertDiv);
+
+      // Automatski ukloni poruku nakon 5 sekundi (opcionalno)
+      setTimeout(() => {
+        if (alertDiv.parentNode === container) { // Provjeri je li još uvijek tu
+             alertDiv.remove();
+        }
+      }, 5000);
+    }
+
+    // --- FUNKCIJE ZA DOHVAĆANJE I PRIKAZ ---
+
+    async function loadRecurringExpenses() {
+        await loadRecurringData('expense', 'expensesList', 'http://localhost:3000/expenses/recurring');
+    }
+
+    async function loadRecurringIncome() {
+        await loadRecurringData('income', 'incomeList', 'http://localhost:3000/income/recurring');
+    }
+
+    async function loadRecurringData(type, listId, url) {
+        const listContainer = document.getElementById(listId);
+        if (!listContainer) {
+            console.error(`List container with id ${listId} not found.`);
+            return;
+        }
+        listContainer.innerHTML = '<p>Učitavanje...</p>'; // Poruka dok se podaci učitavaju
+
+        try {
+            const response = await fetch(url, {
+                headers: getAuthHeader()
+            });
+
+            if (response.status === 401) {
+                 showAlert('Vaša sesija je istekla. Molimo prijavite se ponovno.', 'error');
+                 // Ovdje eventualno preusmjeriti na login
+                 // window.location.href = 'login.html';
+                 return;
+             }
+             if (!response.ok) {
+                 const errorData = await response.json().catch(() => ({ error: `HTTP greška ${response.status}` }));
+                 throw new Error(errorData.error || `Greška pri učitavanju ${type === 'expense' ? 'troškova' : 'prihoda'}`);
+             }
+
+            const items = await response.json();
+            displayRecurringItems(items, listId, type);
+        } catch (error) {
+            console.error(`Error loading recurring ${type}:`, error);
+            showAlert(error.message, 'error');
+            listContainer.innerHTML = `<p style="color: red;">Greška pri učitavanju ${type === 'expense' ? 'troškova' : 'prihoda'}.</p>`;
+        }
+    }
+
+
+    function displayRecurringItems(items, containerId, type) {
+      const container = document.getElementById(containerId);
+       if (!container) {
+            console.error(`Container with id ${containerId} not found for displaying items.`);
+            return;
+        }
+
+      if (!Array.isArray(items)) {
+           console.error("Očekivani podaci nisu polje (array):", items);
+           container.innerHTML = `<p style="color: red;">Došlo je do greške pri prikazu podataka.</p>`;
+           return;
+       }
+
+      if (items.length === 0) {
+        container.innerHTML = `<p>Nema zapisa o ponavljajućim ${type === 'expense' ? 'troškovima' : 'prihodima'}.</p>`;
+        return;
+      }
+
+      container.innerHTML = ''; // Očisti prethodni sadržaj
+
+      const intervalMap = {
+        daily: 'Dnevno',
+        weekly: 'Tjedno',
+        monthly: 'Mjesečno',
+        yearly: 'Godišnje'
+      };
+
+      items.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = `recurring-item ${type}`; // Klasa 'expense' ili 'income'
+
+        const formatDate = (dateString) => {
+            if (!dateString) return 'Nije postavljen';
+            try {
+                // Očekuje se YYYY-MM-DD format iz baze
+                return new Date(dateString).toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            } catch (e) {
+                console.error("Greška pri formatiranju datuma:", dateString, e);
+                return 'Nevažeći datum';
+            }
+        };
+
+        const endDateText = item.recurrence_end_date ? formatDate(item.recurrence_end_date) : 'Nema';
+
+        // Sanitizacija opisa da se spriječi XSS ako opis dolazi direktno iz korisničkog unosa
+        const safeDescription = document.createElement('span');
+        safeDescription.textContent = item.description || (type === 'expense' ? 'Trošak bez opisa' : 'Prihod bez opisa');
+
+        itemEl.innerHTML = `
+          <h3>${safeDescription.innerHTML}</h3>
+          <p><strong>Iznos:</strong> ${parseFloat(item.amount).toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
+          ${type === 'expense' ? `<p><strong>Kategorija:</strong> ${item.category || 'Nema kategorije'}</p>` : ''}
+          <p><strong>Početak ponavljanja:</strong> ${formatDate(item.date)}</p>
+          <p><strong>Interval:</strong> ${intervalMap[item.recurrence_interval] || 'Nepoznat interval'}</p>
+          <p><strong>Završava:</strong> ${endDateText}</p>
+
+          <div class="recurring-actions">
+            <button class="btn btn-warning btn-sm" onclick="editRecurringItem('${type}', '${item.id}', \`${item.description || ''}\`, ${item.amount}, '${item.category || ''}', '${item.date ? item.date.split('T')[0] : ''}', '${item.recurrence_interval}', '${item.recurrence_end_date ? item.recurrence_end_date.split('T')[0] : ''}')">Uredi</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteRecurringItem('${type}', '${item.id}')">Obriši</button>
+          </div>
+        `;
+        // Korištenje `` (backticks) za opis kako bi se handleali navodnici unutar opisa
+        // Korištenje .split('T')[0] da se osigura YYYY-MM-DD format za date input polja
+
+        container.appendChild(itemEl);
+      });
+    }
+
+    // --- FUNKCIJE ZA MODAL I FORMU ---
+
+    function showAddForm(type) {
+      document.getElementById('recurringForm').reset(); // Resetiraj formu
+      document.getElementById('itemType').value = type;
+      document.getElementById('itemId').value = ''; // Obriši ID jer dodajemo novi
+
+      document.getElementById('modalTitle').textContent =
+        `Dodaj Ponavljajući ${type === 'expense' ? 'Trošak' : 'Prihod'}`;
+
+      // Pokaži/sakrij polje za kategoriju
+      document.getElementById('categoryGroup').style.display =
+        type === 'expense' ? 'block' : 'none';
+      document.getElementById('category').required = (type === 'expense'); // Postavi required ovisno o tipu
+
+
+       // Postavi današnji datum kao default za početni datum
+       try {
+         document.getElementById('startDate').valueAsDate = new Date();
+       } catch(e) {
+         console.error("Greška pri postavljanju datuma:", e);
+         const today = new Date();
+         const year = today.getFullYear();
+         const month = String(today.getMonth() + 1).padStart(2, '0');
+         const day = String(today.getDate()).padStart(2, '0');
+         document.getElementById('startDate').value = `${year}-${month}-${day}`;
+       }
+       document.getElementById('endDate').value = ''; // Očisti završni datum
+
+      document.getElementById('recurringModal').style.display = 'block';
+    }
+
+    function editRecurringItem(type, id, description, amount, category, startDate, interval, endDate) {
+      document.getElementById('recurringForm').reset(); // Resetiraj prvo
+      document.getElementById('itemType').value = type;
+      document.getElementById('itemId').value = id; // Postavi ID za uređivanje
+
+      document.getElementById('modalTitle').textContent =
+        `Uredi Ponavljajući ${type === 'expense' ? 'Trošak' : 'Prihod'}`;
+
+      document.getElementById('categoryGroup').style.display =
+        type === 'expense' ? 'block' : 'none';
+       document.getElementById('category').required = (type === 'expense');
+
+      // Popuni polja s postojećim vrijednostima
+      document.getElementById('amount').value = amount;
+      document.getElementById('description').value = description || '';
+      document.getElementById('startDate').value = startDate || ''; // Već bi trebao biti YYYY-MM-DD
+      document.getElementById('interval').value = interval || '';
+      document.getElementById('endDate').value = endDate || ''; // Već bi trebao biti YYYY-MM-DD
+
+      if (type === 'expense') {
+        document.getElementById('category').value = category || '';
+      }
+
+      document.getElementById('recurringModal').style.display = 'block';
+    }
+
+     function hideModal() {
+      const modal = document.getElementById('recurringModal');
+       if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // --- FUNKCIJE ZA SPREMANJE I BRISANJE (API POZIVI) ---
+
+    async function deleteRecurringItem(type, id) {
+      if (!confirm(`Jeste li sigurni da želite trajno obrisati ovaj ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'}?`)) return;
+
+      const url = type === 'expense'
+          ? `http://localhost:3000/expenses/${id}`
+          : `http://localhost:3000/income/${id}`;
+
+      try {
+          const response = await fetch(url, {
+              method: 'DELETE',
+              headers: getAuthHeader()
+          });
+
+         if (response.status === 401) {
+             showAlert('Vaša sesija je istekla. Molimo prijavite se ponovno.', 'error');
+             return;
+         }
+
+          if (!response.ok) {
+               const errorData = await response.json().catch(() => ({ error: `HTTP greška ${response.status}` }));
+               throw new Error(errorData.error || 'Greška pri brisanju');
+          }
+
+          showAlert(`Ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'} uspješno obrisan!`);
+
+          // Osvježi listu
+          if (type === 'expense') {
+              loadRecurringExpenses();
+          } else {
+              loadRecurringIncome();
+          }
+      } catch (error) {
+          console.error(`Error deleting recurring ${type}:`, error);
+          showAlert(error.message, 'error');
+      }
+    }
+
+
+    // Event listener za SUBMIT forme
+    document.getElementById('recurringForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); // Zaustavi defaultno slanje forme
+
+      const type = document.getElementById('itemType').value;
+      const id = document.getElementById('itemId').value; // ID za update, prazan za create
+      const amount = document.getElementById('amount').value;
+      const category = document.getElementById('category').value;
+      const description = document.getElementById('description').value;
+      const startDate = document.getElementById('startDate').value;
+      const interval = document.getElementById('interval').value;
+      const endDate = document.getElementById('endDate').value || null; // null ako je prazno
+
+      // --- Osnovna validacija ---
+      let isValid = true;
+      let errorMsg = '';
+
+      if (!amount || parseFloat(amount) <= 0) {
+          errorMsg += 'Iznos mora biti pozitivan broj. ';
+          isValid = false;
+      }
+      if (!startDate) {
+          errorMsg += 'Početni datum je obavezan. ';
+          isValid = false;
+      }
+      if (!interval) {
+           errorMsg += 'Interval ponavljanja je obavezan. ';
+           isValid = false;
+       }
+       if (type === 'expense' && !category) {
+           errorMsg += 'Kategorija je obavezna za trošak. ';
+           isValid = false;
+       }
+       // Provjera da završni datum nije prije početnog
+        if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
+             errorMsg += 'Završni datum ne može biti prije početnog datuma. ';
+             isValid = false;
+         }
+
+
+      if (!isValid) {
+          showAlert(errorMsg.trim(), 'error');
+          return;
+      }
+      // --- Kraj validacije ---
+
+
+      // Određivanje URL-a i metode (POST za novi, PUT za postojeći)
+      const url = id
+        ? (type === 'expense'
+            ? `http://localhost:3000/expenses/${id}`
+            : `http://localhost:3000/income/${id}`)
+        : (type === 'expense'
+            ? 'http://localhost:3000/expenses'
+            : 'http://localhost:3000/income');
+
+      const method = id ? 'PUT' : 'POST';
+
+      // Priprema tijela zahtjeva
+      const body = {
+        amount: parseFloat(amount),
+        description: description.trim() || null, // null ako je prazan string nakon trimanja
+        date: startDate,             // Početni datum postaje 'date' u bazi
+        isRecurring: true,           // Ovo je ključno za backend da zna da je ponavljajući
+        recurrenceInterval: interval,
+        recurrenceEndDate: endDate
+      };
+
+      if (type === 'expense') {
+        body.category = category;
+      }
+
+      // Slanje zahtjeva
+      try {
+          const response = await fetch(url, {
+              method,
+              headers: {
+                  'Content-Type': 'application/json',
+                  ...getAuthHeader() // Uključi autorizacijski header
+              },
+              body: JSON.stringify(body)
+          });
+
+         if (response.status === 401) {
+             showAlert('Vaša sesija je istekla. Molimo prijavite se ponovno.', 'error');
+             return; // Ne nastavljaj dalje
+         }
+
+          if (!response.ok) {
+              // Pokušaj pročitati poruku o grešci iz odgovora servera
+              const errorData = await response.json().catch(() => ({ error: `Greška ${response.status} pri komunikaciji sa serverom.` }));
+              throw new Error(errorData.error || `Greška pri ${id ? 'ažuriranju' : 'spremanju'} ${type === 'expense' ? 'troška' : 'prihoda'}.`);
+          }
+
+          const result = await response.json(); // Server bi trebao vratiti poruku o uspjehu
+          showAlert(result.message || `Ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'} uspješno ${id ? 'ažuriran' : 'spremljen'}!`);
+          hideModal(); // Sakrij modal nakon uspješnog spremanja
+
+          // Osvježi odgovarajuću listu
+          if (type === 'expense') {
+              loadRecurringExpenses();
+          } else {
+              loadRecurringIncome();
+          }
+
+      } catch (error) {
+          console.error('Greška kod spremanja forme:', error);
+          showAlert(error.message, 'error'); // Pokaži grešku korisniku
+      }
+    });
+
+    // Zatvori modal klikom na pozadinu
+    window.addEventListener('click', (e) => {
+      const modal = document.getElementById('recurringModal');
+      if (e.target === modal) { // Ako je kliknuto direktno na pozadinu modala
+        hideModal();
+      }
+    });
+
+  </script>
+</body>
+</html>

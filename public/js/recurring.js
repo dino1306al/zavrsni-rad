@@ -7,13 +7,13 @@ class RecurringManager {
       
       // Dohvati sve aktivne ponavljajuće stavke
       const [expensesRes, incomeRes] = await Promise.all([
-        fetch(`http://localhost:3000/expenses/recurring?user_id=${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        fetch(`/expenses/recurring?user_id=${userId}`, { // <<< ISPRAVLJENO
+            headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`http://localhost:3000/income/recurring?user_id=${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        fetch(`/income/recurring?user_id=${userId}`, { // <<< ISPRAVLJENO
+            headers: { 'Authorization': `Bearer ${token}` }
         })
-      ]);
+    ]);
       
       if (!expensesRes.ok || !incomeRes.ok) return;
       
@@ -78,8 +78,8 @@ class RecurringManager {
       }
       
       const url = type === 'expense' 
-        ? 'http://localhost:3000/expenses' 
-        : 'http://localhost:3000/income';
+        ? '/expenses' 
+        : 'income';
       
       const body = {
         user_id: userId,
@@ -105,8 +105,8 @@ class RecurringManager {
       // Ažuriraj datum zadnjeg generiranja u originalnoj stavci
       await fetch(
         type === 'expense' 
-          ? `http://localhost:3000/expenses/${item.id}` 
-          : `http://localhost:3000/income/${item.id}`,
+          ? `/expenses/${item.id}` 
+          : `/income/${item.id}`,
         {
           method: 'PUT',
           headers: {

@@ -402,11 +402,11 @@
     // --- FUNKCIJE ZA DOHVAĆANJE I PRIKAZ ---
 
     async function loadRecurringExpenses() {
-        await loadRecurringData('expense', 'expensesList', 'http://localhost:3000/expenses/recurring');
+      await loadRecurringData('expense', 'expensesList', '/expenses/recurring'); // <<< ISPRAVLJENO
     }
 
     async function loadRecurringIncome() {
-        await loadRecurringData('income', 'incomeList', 'http://localhost:3000/income/recurring');
+      await loadRecurringData('income', 'incomeList', '/income/recurring'); // <<< ISPRAVLJENO
     }
 
     async function loadRecurringData(type, listId, url) {
@@ -582,8 +582,8 @@
       if (!confirm(`Jeste li sigurni da želite trajno obrisati ovaj ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'}?`)) return;
 
       const url = type === 'expense'
-          ? `http://localhost:3000/expenses/${id}`
-          : `http://localhost:3000/income/${id}`;
+          ? `/expenses/${id}` // <<< ISPRAVLJENO
+          : `/income/${id}`;   // <<< ISPRAVLJENO
 
       try {
           const response = await fetch(url, {
@@ -666,11 +666,11 @@
       // Određivanje URL-a i metode (POST za novi, PUT za postojeći)
       const url = id
         ? (type === 'expense'
-            ? `http://localhost:3000/expenses/${id}`
-            : `http://localhost:3000/income/${id}`)
+            ? `/expenses/${id}` // <<< ISPRAVLJENO
+            : `/income/${id}`)   // <<< ISPRAVLJENO
         : (type === 'expense'
-            ? 'http://localhost:3000/expenses'
-            : 'http://localhost:3000/income');
+            ? '/expenses'       // <<< ISPRAVLJENO
+            : '/income');       // <<< ISPRAVLJENO
 
       const method = id ? 'PUT' : 'POST';
 

@@ -4,7 +4,7 @@ function checkAuth() {
     const userId = localStorage.getItem('userId');
     
     if (!token || !userId) {
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
       return false;
     }
     return true;
@@ -15,7 +15,7 @@ function checkAuth() {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
-    window.location.href = 'login.html';
+    window.location.href = 'index.html';
   }
   
   // Dohvati auth header za fetch zahtjeve

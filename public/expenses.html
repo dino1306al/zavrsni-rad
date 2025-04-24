@@ -190,7 +190,7 @@
       
       if (!token || !userId) {
         alert('Niste prijavljeni!');
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
         return;
       }
       
@@ -208,7 +208,7 @@
 
     async function fetchExpenses() {
       try {
-        const response = await fetch(`http://localhost:3000/expenses?user_id=${localStorage.getItem('userId')}`, {
+        const response = await fetch(`/expenses?user_id=${localStorage.getItem('userId')}`, {
           headers: getAuthHeader()
         });
         
@@ -272,7 +272,7 @@
       const recurrenceEndDate = isRecurring ? document.getElementById('recurrenceEndDate').value : null;
       
       try {
-        const response = await fetch('http://localhost:3000/expenses', {
+        const response = await fetch('/expenses', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -312,7 +312,7 @@
       }
       
       try {
-        const response = await fetch(`http://localhost:3000/expenses/${id}`, {
+        const response = await fetch(`/expenses/${id}`, {
           method: 'DELETE',
           headers: getAuthHeader()
         });

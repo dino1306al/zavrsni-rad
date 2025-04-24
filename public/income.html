@@ -152,7 +152,7 @@
       
       if (!token || !userId) {
         alert('Niste prijavljeni!');
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
         return;
       }
       
@@ -173,7 +173,7 @@
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         
-        const response = await fetch(`http://localhost:3000/income?user_id=${userId}`, {
+        const response = await fetch(`/income?user_id=${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -240,7 +240,7 @@
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         
-        const response = await fetch('http://localhost:3000/income', {
+        const response = await fetch('/income', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -281,7 +281,7 @@
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`http://localhost:3000/income/${id}`, {
+        const response = await fetch(`/income/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

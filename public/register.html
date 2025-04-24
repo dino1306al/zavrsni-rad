@@ -29,7 +29,7 @@
         <button type="submit" class="btn btn-primary">Registriraj se</button>
       </form>
       
-      <p style="margin-top: 1rem;">Već imaš račun? <a href="login.html">Prijavi se</a></p>
+      <p style="margin-top: 1rem;">Već imaš račun? <a href="index.html">Prijavi se</a></p>
       <div id="message"></div>
     </div>
   </div>
@@ -55,7 +55,7 @@
       }
       
       try {
-        const response = await fetch('http://localhost:3000/users/register', {
+        const response = await fetch('/users/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -70,7 +70,7 @@
         messageElement.innerHTML = `<div class="alert alert-success">${data.message} Preusmjeravanje na prijavu...</div>`;
         
         setTimeout(() => {
-          window.location.href = 'login.html';
+          window.location.href = 'index.html';
         }, 2000);
       } catch (error) {
         console.error(error);

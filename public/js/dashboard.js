@@ -265,113 +265,124 @@ document.addEventListener('DOMContentLoaded', async () => {
     const canvasElement = document.getElementById('budgetChart');
     if (!canvasElement) { console.error("Canvas 'budgetChart' nije pronađen!"); return; }
     const ctx = canvasElement.getContext('2d');
-     if (!ctx) { console.error("Nije moguće dobiti 2D context za 'budgetChart'"); return; }
-
+    if (!ctx) { console.error("Nije moguće dobiti 2D context za 'budgetChart'"); return; }
 
     // Pronađi ili kreiraj element za poruku pored canvasa
     let messageElement = document.getElementById('budgetMessage');
     if (!messageElement) {
         messageElement = document.createElement('p');
         messageElement.id = 'budgetMessage';
-         // Umetni poruku NAKON canvasa, ali unutar istog parenta ako je moguće
+        // Umetni poruku NAKON canvasa, ali unutar istog parenta ako je moguće
         canvasElement.parentNode.insertBefore(messageElement, canvasElement.nextSibling);
         messageElement.style.display = 'none'; // Sakrij inicijalno
     }
 
-
     if (budgetChart) {
-      budgetChart.destroy();
+        budgetChart.destroy();
     }
 
     // Provjeri jesu li budžeti valjani niz
-     if (!Array.isArray(budgets)) {
+    if (!Array.isArray(budgets)) {
         console.error("Budgets data is not an array:", budgets);
         budgets = []; // Tretiraj kao prazno
     }
 
     // Filtriraj opet za svaki slučaj (API bi trebao ovo riješiti)
-     const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-     const filteredBudgets = budgets.filter(b => b.month === currentMonthStr);
-
+    const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    const filteredBudgets = budgets.filter(b => b.month === currentMonthStr);
 
     if (filteredBudgets.length === 0) {
-       canvasElement.style.display = 'none'; // Sakrij graf
-       messageElement.textContent = `Nema postavljenih budžeta za ${document.getElementById('currentMonth')?.textContent || monthString}.`;
-       messageElement.style.display = 'block'; // Pokaži poruku
-      return;
+        canvasElement.style.display = 'none'; // Sakrij graf
+        messageElement.textContent = `Nema postavljenih budžeta za ${document.getElementById('currentMonth')?.textContent || monthString}.`;
+        messageElement.style.display = 'block'; // Pokaži poruku
+        return;
     } else {
-       canvasElement.style.display = 'block'; // Pokaži graf
-       messageElement.style.display = 'none'; // Sakrij poruku
+        canvasElement.style.display = 'block'; // Pokaži graf
+        messageElement.style.display = 'none'; // Sakrij poruku
     }
 
-
     const expensesByCategory = {};
-     // Provjeri jesu li troškovi valjani niz
-      if (!Array.isArray(expenses)) {
+    // Provjeri jesu li troškovi valjani niz
+    if (!Array.isArray(expenses)) {
         console.error("Expenses data is not an array:", expenses);
         expenses = []; // Tretiraj kao prazno
-      }
+    }
     expenses.forEach(exp => {
-      if (!exp.category) return;
-      if (!expensesByCategory[exp.category]) {
-        expensesByCategory[exp.category] = 0;
-      }
-      // Provjeri je li amount broj prije zbrajanja
-       const amount = parseFloat(exp.amount || 0);
-       if (!isNaN(amount)) {
-          expensesByCategory[exp.category] += amount;
-       }
+        if (!exp.category) return;
+        if (!expensesByCategory[exp.category]) {
+            expensesByCategory[exp.category] = 0;
+        }
+        // Provjeri je li amount broj prije zbrajanja
+        const amount = parseFloat(exp.amount || 0);
+        if (!isNaN(amount)) {
+            expensesByCategory[exp.category] += amount;
+        }
     });
 
     const categories = filteredBudgets.map(b => b.category);
     const budgetAmounts = filteredBudgets.map(b => parseFloat(b.amount || 0));
     const actualAmounts = categories.map(cat => expensesByCategory[cat] || 0);
 
-     console.log("Budget Chart Data:", { categories, budgetAmounts, actualAmounts }); // Dodano logiranje
+    console.log("Budget Chart Data:", { categories, budgetAmounts, actualAmounts });
 
     budgetChart = new Chart(ctx, {
-      type: 'bar',
-      indexAxis: 'y',
-      data: {
-        labels: categories,
-        datasets: [
-          {
-            label: 'Budžet',
-            data: budgetAmounts,
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-          },
-          {
-            label: 'Stvarni troškovi',
-            data: actualAmounts,
-            backgroundColor: 'rgba(255, 99, 132, 0.6)',
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { beginAtZero: true }
+        type: 'bar',
+        indexAxis: 'y',
+        data: {
+            labels: categories,
+            datasets: [
+                {
+                    label: 'Budžet',
+                    data: budgetAmounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Stvarni troškovi',
+                    data: actualAmounts,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
         },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                let label = context.dataset.label || '';
-                if (label) label += ': ';
-                if (context.parsed.x !== null) label += new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR' }).format(context.parsed.x);
-                return label;
-              }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { 
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('hr-HR', { 
+                                style: 'currency', 
+                                currency: 'EUR' 
+                            }).format(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.x !== null) {
+                                label += new Intl.NumberFormat('hr-HR', { 
+                                    style: 'currency', 
+                                    currency: 'EUR' 
+                                }).format(context.parsed.x);
+                            }
+                            return label;
+                        }
+                    }
+                }
             }
-          }
         }
-      }
     });
-  }
+}
 
   function createCategoriesChart(expenses) {
      const canvasElement = document.getElementById('categoriesChart');

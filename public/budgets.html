@@ -171,15 +171,17 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       const sada = new Date();
+      // Inicijalno postavi trenutni mjesec
       trenutniMjesec = `${sada.getFullYear()}-${String(sada.getMonth() + 1).padStart(2, '0')}`;
       document.getElementById('mjesec').value = trenutniMjesec;
-      ucitajBudzete();
+      ucitajBudzete(); // Učitaj budžete za inicijalno odabrani mjesec
     });
 
     async function ucitajBudzete() {
       try {
         const token = localStorage.getItem('token');
         const korisnikId = localStorage.getItem('userId');
+        // Uvijek čitaj vrijednost iz input polja prije slanja zahtjeva
         trenutniMjesec = document.getElementById('mjesec').value;
 
         if (!token || !korisnikId) {
@@ -188,39 +190,58 @@
           return;
         }
 
+        // --- KLJUČNI DIO ---
+        // Šalje se user_id i TRENUTNO odabrani mjesec (npr. "2025-04")
+        // Backend MORA koristiti 'month' parametar za filtriranje
         const odgovor = await fetch(`/budgets?user_id=${korisnikId}&month=${trenutniMjesec}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
+        // --- KRAJ KLJUČNOG DIJELA ---
 
         if (!odgovor.ok) {
-          throw new Error('Greška pri učitavanju budžeta');
+            const errorData = await odgovor.json().catch(() => ({ message: 'Greška pri učitavanju budžeta bez detalja' }));
+            throw new Error(errorData.message || `Greška pri učitavanju budžeta (${odgovor.status})`);
         }
 
         const budzeti = await odgovor.json();
+        // Ako backend ne filtrira, 'budzeti' će sadržavati sve budžete,
+        // a ne samo one za 'trenutniMjesec'
         prikaziBudzete(budzeti);
       } catch (greska) {
-        console.error(greska);
+        console.error('Greška u ucitajBudzete:', greska);
         alert(greska.message);
+        // Ako je greška tokena, odvedi na prijavu
+        if (greska.message.includes('401') || greska.message.includes('token')) {
+             window.location.href = 'index.html';
+        }
       }
     }
 
     function prikaziBudzete(budzeti) {
       const lista = document.getElementById('listaBudzeta');
-      lista.innerHTML = '';
+      lista.innerHTML = ''; // Očisti prethodni sadržaj
+
+      if (!Array.isArray(budzeti)) {
+        console.error("Primljeni podaci za budžete nisu niz:", budzeti);
+        lista.innerHTML = `<tr><td colspan="3" style="text-align: center; color: red;">Greška u formatu primljenih podataka.</td></tr>`;
+        return;
+      }
 
       if (budzeti.length === 0) {
         lista.innerHTML = `
           <tr>
             <td colspan="3" style="text-align: center;">
-              Nema budžeta za odabrani mjesec. <a href="#" onclick="prikaziFormuDodavanja()">Dodajte novi budžet</a>.
+              Nema budžeta za odabrani mjesec (${trenutniMjesec}). <a href="#" onclick="prikaziFormuDodavanja(); return false;">Dodajte novi budžet</a>.
             </td>
           </tr>
         `;
         return;
       }
 
+      // Prikazuje samo one budžete koje je backend vratio.
+      // Ako backend nije filtrirao po mjesecu, prikazat će sve.
       budzeti.forEach(b => {
         const red = document.createElement('tr');
         red.innerHTML = `
@@ -250,11 +271,13 @@
         gumbSpremi.textContent = 'Ažuriraj';
         odabirKategorije.value = kategorija;
         poljeIznos.value = iznos;
+        odabirKategorije.disabled = true; // Onemogući promjenu kategorije kod uređivanja? Opcionalno.
       } else {
         naslov.textContent = 'Dodaj Novi Budžet';
         gumbSpremi.textContent = 'Spremi';
         odabirKategorije.value = '';
         poljeIznos.value = '';
+        odabirKategorije.disabled = false;
       }
 
       document.getElementById('tablicaBudzeta').classList.add('sakriveno');
@@ -264,6 +287,9 @@
     function sakrijFormuDodavanja() {
       document.getElementById('formaDodavanja').classList.add('sakriveno');
       document.getElementById('tablicaBudzeta').classList.remove('sakriveno');
+      // Resetiraj formu
+      document.getElementById('formaBudzeta').reset();
+      document.getElementById('kategorija').disabled = false;
       modUredivanja = false;
       idZaUredivanje = null;
     }
@@ -275,58 +301,72 @@
       const korisnikId = localStorage.getItem('userId');
       const kategorija = document.getElementById('kategorija').value;
       const iznos = document.getElementById('iznos').value;
-      const mjesec = document.getElementById('mjesec').value;
+      // Mjesec za koji dodajemo/uređujemo je onaj trenutno odabran u input polju
+      const mjesecZaSlanje = document.getElementById('mjesec').value;
 
-      if (!kategorija || !iznos) {
-        alert('Molimo popunite sva polja!');
+
+      if (!kategorija || !iznos || !mjesecZaSlanje) {
+        alert('Molimo popunite sva polja i odaberite mjesec!');
         return;
       }
+        if (isNaN(parseFloat(iznos)) || parseFloat(iznos) <= 0) {
+            alert('Molimo unesite ispravan pozitivan iznos.');
+            return;
+        }
+
 
       try {
         let odgovor;
+        let url;
+        let metoda;
+        let tijelo;
 
         if (modUredivanja) {
-          odgovor = await fetch(`/budgets/${idZaUredivanje}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              amount: iznos,
-              user_id: korisnikId,
-              month: mjesec
-            })
+          metoda = 'PUT';
+          url = `/budgets/${idZaUredivanje}`;
+          tijelo = JSON.stringify({
+            // Kod ažuriranja obično šalješ samo polja koja se mijenjaju
+            amount: iznos,
+            // Pazi: Ako backend očekuje user_id i kod PUT, dodaj ga
+            user_id: korisnikId
+             // Ako backend očekuje i month kod PUT, dodaj ga:
+            // month: mjesecZaSlanje
           });
         } else {
-          odgovor = await fetch('/budgets', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              category: kategorija,
-              amount: iznos,
-              month: mjesec,
-              user_id: korisnikId
-            })
+          metoda = 'POST';
+          url = '/budgets';
+          tijelo = JSON.stringify({
+            category: kategorija,
+            amount: iznos,
+            month: mjesecZaSlanje, // Šaljemo odabrani mjesec
+            user_id: korisnikId
           });
         }
 
+        odgovor = await fetch(url, {
+          method: metoda,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: tijelo
+        });
+
         if (!odgovor.ok) {
-          throw new Error(modUredivanja ? 'Greška pri ažuriranju budžeta' : 'Greška pri dodavanju budžeta');
+             const errorData = await odgovor.json().catch(() => ({ message: modUredivanja ? 'Greška pri ažuriranju budžeta' : 'Greška pri dodavanju budžeta' }));
+             throw new Error(errorData.message || `Greška (${odgovor.status})`);
         }
 
         sakrijFormuDodavanja();
-        ucitajBudzete();
+        ucitajBudzete(); // Ponovno učitaj budžete za trenutno odabrani mjesec
       } catch (greska) {
-        console.error(greska);
+        console.error('Greška kod spremanja budžeta:', greska);
         alert(greska.message);
       }
     });
 
     function urediBudzet(id, kategorija, iznos) {
+      // Pass 'true' for editing mode, budget id, category, and amount
       prikaziFormuDodavanja(true, id, kategorija, iznos);
     }
 
@@ -337,28 +377,27 @@
 
       try {
         const token = localStorage.getItem('token');
-        const korisnikId = localStorage.getItem('userId');
-        const mjesec = document.getElementById('mjesec').value;
+        const korisnikId = localStorage.getItem('userId'); // Potreban ako backend zahtijeva user_id i za DELETE
 
         const odgovor = await fetch(`/budgets/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            // Neki REST API-ji očekuju Content-Type i kod DELETE s tijelom
+             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            user_id: korisnikId,
-            month: mjesec
-          })
+           // Neki REST API-ji mogu očekivati user_id u tijelu i kod DELETE
+           body: JSON.stringify({ user_id: korisnikId }) // Prilagodi ako tvoj backend ovo ne treba
         });
 
         if (!odgovor.ok) {
-          throw new Error('Greška pri brisanju budžeta');
+           const errorData = await odgovor.json().catch(() => ({ message: 'Greška pri brisanju budžeta' }));
+           throw new Error(errorData.message || `Greška pri brisanju (${odgovor.status})`);
         }
 
-        ucitajBudzete();
+        ucitajBudzete(); // Ponovno učitaj listu nakon brisanja
       } catch (greska) {
-        console.error(greska);
+        console.error('Greška kod brisanja budžeta:', greska);
         alert(greska.message);
       }
     }

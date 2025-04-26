@@ -714,9 +714,8 @@
           let successMessage = '';
           if (type === 'expense') {
           // Za troškove, koristi serversku poruku ili generiraj hrvatsku
-          successMessage = `Ponavljajući trošak uspješno ${id ? 'ažuriran' : 'spremljen'}!`;
+          successMessage = `Ponavljajući trošak uspješno ${id ? 'ažuriran' : 'dodan'}!`;
           } else if (type === 'income') {
-          // Za prihode, UVIJEK koristi hrvatske poruke, IGNORIRAJ result.message
           if (id) { // Ažuriranje
             successMessage = 'Ponavljajući prihod uspješno ažuriran!';
           } else { // Dodavanje

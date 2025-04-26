@@ -128,12 +128,14 @@
           <tr>
             <th>Kategorija</th>
             <th>Iznos (€)</th>
+            <th>Mjesec</th> <!-- DODANO -->
             <th>Akcije</th>
           </tr>
         </thead>
         <tbody id="listaBudzeta"></tbody>
       </table>
     </div>
+
 
     <div id="formaDodavanja" class="forma-okvir sakriveno">
       <h2 id="naslovForme">Dodaj Novi Budžet</h2>
@@ -222,31 +224,30 @@
     function prikaziBudzete(budzeti) {
       const lista = document.getElementById('listaBudzeta');
       lista.innerHTML = ''; // Očisti prethodni sadržaj
-
+    
       if (!Array.isArray(budzeti)) {
         console.error("Primljeni podaci za budžete nisu niz:", budzeti);
-        lista.innerHTML = `<tr><td colspan="3" style="text-align: center; color: red;">Greška u formatu primljenih podataka.</td></tr>`;
+        lista.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Greška u formatu primljenih podataka.</td></tr>`;
         return;
       }
-
+    
       if (budzeti.length === 0) {
         lista.innerHTML = `
           <tr>
-            <td colspan="3" style="text-align: center;">
+            <td colspan="4" style="text-align: center;">
               Nema budžeta za odabrani mjesec (${trenutniMjesec}). <a href="#" onclick="prikaziFormuDodavanja(); return false;">Dodajte novi budžet</a>.
             </td>
           </tr>
         `;
         return;
       }
-
-      // Prikazuje samo one budžete koje je backend vratio.
-      // Ako backend nije filtrirao po mjesecu, prikazat će sve.
+    
       budzeti.forEach(b => {
         const red = document.createElement('tr');
         red.innerHTML = `
           <td>${b.category}</td>
           <td>${parseFloat(b.amount).toFixed(2)} €</td>
+          <td>${formatirajMjesec(b.month)}</td> <!-- NOVO -->
           <td class="akcije">
             <button class="uredi-gumb" onclick="urediBudzet(${b.id}, '${b.category}', ${b.amount})">Uredi</button>
             <button class="obrisi-gumb" onclick="obrisiBudzet(${b.id})">Obriši</button>
@@ -255,6 +256,7 @@
         lista.appendChild(red);
       });
     }
+
 
     function prikaziFormuDodavanja(uredi = false, id = null, kategorija = '', iznos = '') {
       modUredivanja = uredi;
@@ -401,6 +403,17 @@
         alert(greska.message);
       }
     }
+
+    function formatirajMjesec(isoMjesec) {
+    if (!isoMjesec) return '-';
+    const [godina, mjesec] = isoMjesec.split('-');
+    const mjeseci = ["Siječanj", "Veljača", "Ožujak", "Travanj", "Svibanj", "Lipanj",
+                     "Srpanj", "Kolovoz", "Rujan", "Listopad", "Studeni", "Prosinac"];
+    const indeks = parseInt(mjesec, 10) - 1;
+    if (indeks < 0 || indeks > 11) return isoMjesec;
+    return `${mjeseci[indeks]} ${godina}`;
+  }
+
   </script>
 </body>
 </html>

@@ -160,27 +160,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         throw new Error(`Expenses API error: ${expensesRes.status} ${await expensesRes.text()}`);
       }
        // Tvoja originalna obrada budžeta
-       let allBudgets = []; // Preimenuj varijablu da bude jasno da može sadržavati sve
+       let budgets = [];
        if (!budgetsRes.ok) {
-         console.warn(`Budgets API error: ${budgetsRes.status} ${await budgetsRes.text()}`);
-         // U slučaju greške, lista ostaje prazna
+          console.warn(`Budgets API error: ${budgetsRes.status} ${await budgetsRes.text()}`);
        } else {
-          try {
-            budgets = await budgetsRes.json();
-            // Dodatna provjera da li je backend vratio niz
-            if (!Array.isArray(budgets)) {
-                console.warn("Odgovor za budžete nije niz (array):", budgets);
-                budgets = []; // Postavi na prazan niz ako nije ispravan format
-            }
-          } catch (e) {
-            console.error("Greška pri parsiranju budžeta:", e, await budgetsRes.text().catch(()=>""));
-            budgets = []; // Postavi na prazan niz u slučaju greške parsiranja
-          }
+           try {
+               budgets = await budgetsRes.json();
+           } catch (e) {
+               console.error("Greška pri parsiranju budžeta:", e, await budgetsRes.text().catch(()=>""));
+           }
        }
-
-       // Filtriraj dohvaćene budžete da ostanu samo oni za TRENUTNI mjesec dashboarda
-       const filteredBudgets = budgets.filter(b => b.month === monthString); 
-
 
 
       previousMonthData = { income: 0, expenses: 0, balance: 0 }; // Originalni reset
@@ -290,6 +279,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (budgetChart) {
       budgetChart.destroy();
     }
+    const monthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    budgets = budgets.filter(b => b.month === monthString);
 
      // Tvoja originalna provjera za prazne budžete
     if (!Array.isArray(budgets) || budgets.length === 0) { // Dodao provjeru da je niz

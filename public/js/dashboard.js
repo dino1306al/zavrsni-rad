@@ -166,20 +166,20 @@ document.addEventListener('DOMContentLoaded', async () => {
          // U slučaju greške, lista ostaje prazna
        } else {
           try {
-            allBudgets = await budgetsRes.json();
+            budgets = await budgetsRes.json();
             // Dodatna provjera da li je backend vratio niz
-            if (!Array.isArray(allBudgets)) {
-                console.warn("Odgovor za budžete nije niz (array):", allBudgets);
-                allBudgets = []; // Postavi na prazan niz ako nije ispravan format
+            if (!Array.isArray(budgets)) {
+                console.warn("Odgovor za budžete nije niz (array):", budgets);
+                budgets = []; // Postavi na prazan niz ako nije ispravan format
             }
           } catch (e) {
             console.error("Greška pri parsiranju budžeta:", e, await budgetsRes.text().catch(()=>""));
-            allBudgets = []; // Postavi na prazan niz u slučaju greške parsiranja
+            budgets = []; // Postavi na prazan niz u slučaju greške parsiranja
           }
        }
 
        // Filtriraj dohvaćene budžete da ostanu samo oni za TRENUTNI mjesec dashboarda
-       const filteredBudgets = allBudgets.filter(b => b.month === monthString); 
+       const filteredBudgets = budgets.filter(b => b.month === monthString); 
 
 
 

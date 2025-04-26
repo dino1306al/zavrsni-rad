@@ -711,8 +711,20 @@
           }
         
           const result = await response.json(); // Server bi trebao vratiti poruku o uspjehu
-          showAlert(result.message || `Ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'} uspješno ${id ? 'ažuriran' : 'spremljen'}!`);
-          hideModal(); // Sakrij modal nakon uspješnog spremanja
+          let successMessage = '';
+          if (type === 'expense') {
+          // Za troškove, koristi serversku poruku ili generiraj hrvatsku
+          successMessage = result.message || `Ponavljajući trošak uspješno ${id ? 'ažuriran' : 'spremljen'}!`;
+          } else if (type === 'income') {
+          // Za prihode, UVIJEK koristi hrvatske poruke, IGNORIRAJ result.message
+          if (id) { // Ažuriranje
+            successMessage = 'Ponavljajući prihod uspješno ažuriran!';
+          } else { // Dodavanje
+            successMessage = 'Ponavljajući prihod uspješno dodan!';
+          }
+        }
+        showAlert(successMessage);
+        hideModal();
 
           // Osvježi odgovarajuću listu
           if (type === 'expense') {

@@ -710,8 +710,10 @@
               throw new Error(errorData.error || `Greška pri ${id ? 'ažuriranju' : 'spremanju'} ${type === 'expense' ? 'troška' : 'prihoda'}.`);
           }
 
-          const result = await response.json(); // Server bi trebao vratiti poruku o uspjehu
-          showAlert(result.message || `Ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'} uspješno ${id ? 'ažuriran' : 'spremljen'}!`);
+          const successMessage = id 
+              ? `Ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'} uspješno ažuriran!` 
+              : `Ponavljajući ${type === 'expense' ? 'trošak' : 'prihod'} uspješno dodan!`;
+          showAlert(result.message || successMessage);
           hideModal(); // Sakrij modal nakon uspješnog spremanja
 
           // Osvježi odgovarajuću listu

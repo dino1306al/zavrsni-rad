@@ -188,7 +188,7 @@
           return;
         }
 
-        const odgovor = await fetch(`/budgets?user_id=<span class="math-inline">\{korisnikId\}&month\=</span>{trenutniMjesec}`, {
+        const odgovor = await fetch(`/budgets?user_id=${korisnikId}&month=${trenutniMjesec}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -275,6 +275,7 @@
       const korisnikId = localStorage.getItem('userId');
       const kategorija = document.getElementById('kategorija').value;
       const iznos = document.getElementById('iznos').value;
+      const mjesec = document.getElementById('mjesec').value;
 
       if (!kategorija || !iznos) {
         alert('Molimo popunite sva polja!');
@@ -293,7 +294,8 @@
             },
             body: JSON.stringify({
               amount: iznos,
-              user_id: korisnikId
+              user_id: korisnikId,
+              month: mjesec
             })
           });
         } else {
@@ -306,7 +308,7 @@
             body: JSON.stringify({
               category: kategorija,
               amount: iznos,
-              month: trenutniMjesec,
+              month: mjesec,
               user_id: korisnikId
             })
           });
@@ -336,6 +338,7 @@
       try {
         const token = localStorage.getItem('token');
         const korisnikId = localStorage.getItem('userId');
+        const mjesec = document.getElementById('mjesec').value;
 
         const odgovor = await fetch(`/budgets/${id}`, {
           method: 'DELETE',
@@ -344,7 +347,8 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            user_id: korisnikId
+            user_id: korisnikId,
+            month: mjesec
           })
         });
 

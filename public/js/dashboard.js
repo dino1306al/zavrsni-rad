@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   function updateNavigationButtons() {
-    const prevButton = document.querySelector('.month-selector button:first-child');
-    const nextButton = document.querySelector('.month-selector button:last-child');
+    const prevButton = document.querySelector('.month-selector button:last-child');
+    const nextButton = document.querySelector('.month-selector button:first-child');
 
     if (!prevButton || !nextButton) return;
 

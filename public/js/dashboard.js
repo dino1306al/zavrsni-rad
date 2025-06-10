@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // Pretpostavka da checkAuth() i getAuthHeader() dolaze iz auth.js
   if (!checkAuth()) return;
 
   let financeChart = null;
@@ -16,25 +15,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     document.getElementById('welcomeMessage').textContent = `Dobrodošli, ${localStorage.getItem('username')}!`;
-    await loadAvailableMonths(); 
+    await loadAvailableMonths();
 
     if (availableMonths.length > 0) {
       const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-      // Sortiraj mjesece od najnovijeg prema najstarijem za lakšu navigaciju
       availableMonths.sort((a, b) => b.localeCompare(a));
       currentMonthIndex = availableMonths.indexOf(currentMonthStr);
 
       if (currentMonthIndex === -1) {
-        currentMonthIndex = 0; 
+        currentMonthIndex = 0;
         if (availableMonths.length > 0) {
-            const [year, month] = availableMonths[0].split('-');
-            currentYear = parseInt(year);
-            currentMonth = parseInt(month) - 1;
+          const [year, month] = availableMonths[0].split('-');
+          currentYear = parseInt(year);
+          currentMonth = parseInt(month) - 1;
         }
       }
     }
 
-    await loadData(); 
+    await loadData();
     updateNavigationButtons();
 
   } catch (error) {
@@ -52,14 +50,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (newIndex < 0 || newIndex >= availableMonths.length) return;
 
     currentMonthIndex = newIndex;
-      if (availableMonths[currentMonthIndex]) {
-        const [year, month] = availableMonths[currentMonthIndex].split('-');
-        currentYear = parseInt(year);
-        currentMonth = parseInt(month) - 1;
-      } else {
-        console.error("Pokušaj dohvaćanja nepostojećeg indeksa mjeseca:", newIndex);
-        return;
-      }
+    if (availableMonths[currentMonthIndex]) {
+      const [year, month] = availableMonths[currentMonthIndex].split('-');
+      currentYear = parseInt(year);
+      currentMonth = parseInt(month) - 1;
+    } else {
+      console.error("Pokušaj dohvaćanja nepostojećeg indeksa mjeseca:", newIndex);
+      return;
+    }
 
     await loadData();
     updateNavigationButtons();
@@ -75,7 +73,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       prevButton.disabled = true;
       nextButton.disabled = true;
     } else {
-       // availableMonths je sortiran DESC (najnoviji prvi)
       prevButton.disabled = currentMonthIndex === 0;
       nextButton.disabled = currentMonthIndex === availableMonths.length - 1;
     }
@@ -95,15 +92,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!response.ok) {
         let errorMsg = 'Greška pri dohvaćanju dostupnih mjeseci';
         try {
-            const errorData = await response.json();
-            errorMsg = errorData.error || errorMsg;
-        } catch (e) { /* Ignoriraj ako tijelo nije JSON */ }
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {}
         throw new Error(errorMsg);
       }
 
       availableMonths = await response.json();
-      // Sortiranje se sada radi nakon dohvaćanja, prije postavljanja indeksa
-      
     } catch (error) {
       console.error('Greška u loadAvailableMonths:', error);
       showAlert(`Greška u dohvaćanju mjeseci: ${error.message}`, 'error');
@@ -115,7 +110,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       updateMonthDisplay();
       const monthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-
       const previousMonthStr = getPreviousMonthString();
 
       const [incomesRes, expensesRes, budgetsRes, prevMonthRes] = await Promise.all([
@@ -128,10 +122,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetch(`/budgets?user_id=${localStorage.getItem('userId')}&month=${monthString}`, {
           headers: getAuthHeader()
         }),
-        // Dohvat sažetka za prethodni mjesec (ako postoji)
         previousMonthStr ? fetch(`/income/summary?user_id=${localStorage.getItem('userId')}&month=${previousMonthStr}`, {
           headers: getAuthHeader()
-        }) : Promise.resolve(new Response(JSON.stringify({ income: 0, expenses: 0, balance: 0 }), { status: 200 }))
+        }) : Promise.resolve(new Response(JSON.stringify({ income: 0, expenses: 0, balance: 0 }), { status: 200 })
       ]);
 
       if (!incomesRes.ok) throw new Error(`Greška pri dohvaćanju prihoda: ${incomesRes.statusText}`);
@@ -148,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (prevMonthRes && prevMonthRes.ok) {
         previousMonthData = await prevMonthRes.json();
       } else {
-         console.warn("Nema podataka za prethodni mjesec.");
+        console.warn("Nema podataka za prethodni mjesec.");
       }
       
       const incomes = await incomesRes.json();
@@ -167,14 +160,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const balanceChangeElement = document.getElementById('balanceChange');
       if (balanceChangeElement) {
         if (balanceChange >= 0) {
-            balanceChangeElement.innerHTML = `<span style="color: green">↑ ${balanceChange.toFixed(2)} €</span> u odnosu na prethodni mjesec`;
+          balanceChangeElement.innerHTML = `<span style="color: green">↑ ${balanceChange.toFixed(2)} €</span> u odnosu na prethodni mjesec`;
         } else {
-            balanceChangeElement.innerHTML = `<span style="color: red">↓ ${Math.abs(balanceChange).toFixed(2)} €</span> u odnosu na prethodni mjesec`;
+          balanceChangeElement.innerHTML = `<span style="color: red">↓ ${Math.abs(balanceChange).toFixed(2)} €</span> u odnosu na prethodni mjesec`;
         }
       }
 
       createFinanceChart(totalIncome, totalExpenses, balance);
-      createBudgetChart(expenses, budgets); // Sada prima ispravno filtrirane budžete
+      createBudgetChart(expenses, budgets);
       createCategoriesChart(expenses);
 
     } catch (error) {
@@ -183,17 +176,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-
   function getPreviousMonthString() {
-    const prevIndex = currentMonthIndex + 1; // Jer je sortirano DESC
+    const prevIndex = currentMonthIndex + 1;
     if (prevIndex < availableMonths.length) {
-        return availableMonths[prevIndex];
+      return availableMonths[prevIndex];
     }
-    return null; // Nema prethodnog mjeseca u podacima
+    return null;
   }
 
   function updateMonthDisplay() {
-    const monthNames = ["Siječanj", "Veljača", "Ožujak", "Travanj", "Svibanj", "Lipanj", "Srpanj", "Kolovoz", "Rujan", "Listopad", "Studeni", "Prosinac"];
+    const monthNames = ["Siječanj", "Veljača", "Ožujak", "Travanj", "Svibanj", "Lipanj", 
+                       "Srpanj", "Kolovoz", "Rujan", "Listopad", "Studeni", "Prosinac"];
     const displayElement = document.getElementById('currentMonth');
     if (displayElement) {
       displayElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
@@ -233,50 +226,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function createBudgetChart(expenses, budgets) {
-    const container = document.getElementById('budgetChart').parentElement;
+    const container = document.getElementById('budgetChart')?.parentElement;
     if (!container) return;
     
-    // Uništi stari graf ako postoji
     if (budgetChart) {
-        budgetChart.destroy();
-        budgetChart = null;
+      budgetChart.destroy();
+      budgetChart = null;
     }
-    
-    // *** ISPRAVAK START ***
-    // 1. Uklonjena je nepotrebna i neispravna linija za filtriranje:
-    // budgets = budgets.filter(b => b.month === monthString);
-    // Jer backend sada šalje ispravno filtrirane podatke.
 
-    // 2. Poboljšana logika za prikaz poruke ili grafa.
     if (!Array.isArray(budgets) || budgets.length === 0) {
-        // Ako nema budžeta, prikaži poruku i sakrij canvas
-        container.innerHTML = `
-            <h2>Pregled budžeta</h2>
-            <p>Niste postavili budžete za ovaj mjesec. <a href="budgets.html">Postavite budžete</a> za bolju kontrolu troškova.</p>
-            <canvas id="budgetChart" style="display: none;"></canvas> 
-        `;
-        return; 
+      container.innerHTML = `
+        <h2>Pregled budžeta</h2>
+        <p>Niste postavili budžete za ovaj mjesec. <a href="budgets.html">Postavite budžete</a> za bolju kontrolu troškova.</p>
+        <canvas id="budgetChart" style="display: none;"></canvas>
+      `;
+      return;
     }
     
-    // Ako ima budžeta, osiguraj da je canvas vidljiv i da nema poruke
-    // Ovo je važno ako korisnik dođe s mjeseca bez budžeta na mjesec s budžetima
     if (!container.querySelector('canvas') || container.querySelector('canvas').style.display === 'none') {
-        container.innerHTML = `
-            <h2>Pregled budžeta</h2>
-            <canvas id="budgetChart"></canvas>
-        `;
+      container.innerHTML = `
+        <h2>Pregled budžeta</h2>
+        <canvas id="budgetChart"></canvas>
+      `;
     }
     
     const ctx = document.getElementById('budgetChart').getContext('2d');
-    // *** ISPRAVAK END ***
 
     const expensesByCategory = {};
     expenses.forEach(exp => {
       if (!exp.category) return;
-      if (!expensesByCategory[exp.category]) {
-        expensesByCategory[exp.category] = 0;
-      }
-      expensesByCategory[exp.category] += parseFloat(exp.amount || 0);
+      expensesByCategory[exp.category] = (expensesByCategory[exp.category] || 0) + parseFloat(exp.amount || 0);
     });
 
     const categories = budgets.map(b => b.category);
@@ -300,15 +279,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       options: {
         responsive: true,
         scales: {
-          x: { stacked: false },
-          y: { beginAtZero: true, stacked: false }
+          y: { beginAtZero: true }
         }
       }
     });
   }
 
   function createCategoriesChart(expenses) {
-     const container = document.getElementById('categoriesChart').parentElement;
+    const container = document.getElementById('categoriesChart')?.parentElement;
     if (!container) return;
 
     if (categoriesChart) {
@@ -317,12 +295,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (!Array.isArray(expenses) || expenses.length === 0) {
-        container.innerHTML = `<h2>Troškovi po kategorijama</h2><p>Nema troškova za prikaz u ovom mjesecu.</p><canvas id="categoriesChart" style="display: none;"></canvas>`;
-        return;
+      container.innerHTML = `
+        <h2>Troškovi po kategorijama</h2>
+        <p>Nema troškova za prikaz u ovom mjesecu.</p>
+        <canvas id="categoriesChart" style="display: none;"></canvas>
+      `;
+      return;
     }
 
     if (!container.querySelector('canvas') || container.querySelector('canvas').style.display === 'none') {
-        container.innerHTML = `<h2>Troškovi po kategorijama</h2><canvas id="categoriesChart"></canvas>`;
+      container.innerHTML = `
+        <h2>Troškovi po kategorijama</h2>
+        <canvas id="categoriesChart"></canvas>
+      `;
     }
     
     const ctx = document.getElementById('categoriesChart').getContext('2d');
@@ -330,10 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categories = {};
     expenses.forEach(exp => {
       if (!exp.category) return;
-      if (!categories[exp.category]) {
-        categories[exp.category] = 0;
-      }
-      categories[exp.category] += parseFloat(exp.amount || 0);
+      categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount || 0);
     });
 
     const labels = Object.keys(categories);
@@ -363,8 +345,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // --- Modal i ostale funkcije ostaju uglavnom iste ---
-
   window.showMonthlyComparison = async function() {
     try {
       const response = await fetch(`/income/transactions/comparison?user_id=${localStorage.getItem('userId')}`, {
@@ -384,7 +364,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      // Sortiraj podatke po mjesecima (ASC) za ispravan prikaz na grafu
       comparisonData.sort((a,b) => a.month.localeCompare(b.month));
 
       const labels = comparisonData.map(item => {
@@ -456,29 +435,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
   
-  // Nije bilo checkAuth i getAuthHeader funkcija, dodajem osnovne verzije
   function checkAuth() {
     const token = localStorage.getItem('token');
     if (!token) {
-        window.location.href = 'index.html';
-        return false;
+      window.location.href = 'index.html';
+      return false;
     }
     return true;
   }
   
   function getAuthHeader() {
     return {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
     };
   }
   
   function showAlert(message, type='error') {
-     // Izbjegavaj stvaranje puno alert boxova, koristi jedan ako je moguće
     let alertBox = document.querySelector('.alert-box');
     if (!alertBox) {
-        alertBox = document.createElement('div');
-        alertBox.className = 'alert-box';
-        document.body.appendChild(alertBox);
+      alertBox = document.createElement('div');
+      alertBox.className = 'alert-box';
+      document.body.appendChild(alertBox);
     }
     
     alertBox.className = `alert-box alert-${type}`;
@@ -486,8 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     alertBox.style.display = 'block';
 
     setTimeout(() => {
-        alertBox.style.display = 'none';
+      alertBox.style.display = 'none';
     }, 5000);
   }
-
 });

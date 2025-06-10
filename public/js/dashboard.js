@@ -1,12 +1,14 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // Pretpostavka da checkAuth() i getAuthHeader() dolaze iz auth.js
+  // Provjera je li korisnik prijavljen
   if (!checkAuth()) return;
 
+  // Varijable za Chart.js instance kako bi se mogle uništiti prije ponovnog crtanja
   let financeChart = null;
   let budgetChart = null;
   let categoriesChart = null;
   let comparisonChart = null;
 
+  // Globalne varijable za praćenje stanja
   let currentDate = new Date();
   let currentMonth = currentDate.getMonth();
   let currentYear = currentDate.getFullYear();
@@ -15,166 +17,150 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentMonthIndex = 0;
 
   try {
+    // Inicijalizacija stranice
     document.getElementById('welcomeMessage').textContent = `Dobrodošli, ${localStorage.getItem('username')}!`;
-    await loadAvailableMonths(); 
+    await loadAvailableMonths();
 
+    // Ako postoje dostupni mjeseci s transakcijama
     if (availableMonths.length > 0) {
-      const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-      // Sortiraj mjesece od najnovijeg prema najstarijem za lakšu navigaciju
-      availableMonths.sort((a, b) => b.localeCompare(a));
-      currentMonthIndex = availableMonths.indexOf(currentMonthStr);
-
-      if (currentMonthIndex === -1) {
-        currentMonthIndex = 0; 
-        if (availableMonths.length > 0) {
-            const [year, month] = availableMonths[0].split('-');
-            currentYear = parseInt(year);
-            currentMonth = parseInt(month) - 1;
-        }
-      }
+      // Postavi prikaz na najnoviji dostupni mjesec (zadnji u kronološki sortiranom nizu)
+      currentMonthIndex = availableMonths.length - 1;
+      
+      const [year, month] = availableMonths[currentMonthIndex].split('-');
+      currentYear = parseInt(year);
+      currentMonth = parseInt(month) - 1;
     }
 
-    await loadData(); 
+    // Učitaj podatke za inicijalno odabrani mjesec i ažuriraj gumbe
+    await loadData();
     updateNavigationButtons();
 
   } catch (error) {
-    console.error('Detalji greške:', error);
+    console.error('Greška pri inicijalizaciji nadzorne ploče:', error);
     showAlert(`Greška: ${error.message}`, 'error');
+    // Ako je greška vezana za autorizaciju, odjavi korisnika
     if (error.message.includes('token') || error.message.includes('401')) {
       localStorage.clear();
       window.location.href = 'index.html';
     }
   }
 
+  // Funkcija za promjenu mjeseca (povezana s gumbima)
   window.changeMonth = async function(offset) {
     const newIndex = currentMonthIndex + offset;
 
+    // Spriječi odlazak izvan granica dostupnih mjeseci
     if (newIndex < 0 || newIndex >= availableMonths.length) return;
 
+    // Ažuriraj trenutni indeks i datum
     currentMonthIndex = newIndex;
-      if (availableMonths[currentMonthIndex]) {
-        const [year, month] = availableMonths[currentMonthIndex].split('-');
-        currentYear = parseInt(year);
-        currentMonth = parseInt(month) - 1;
-      } else {
-        console.error("Pokušaj dohvaćanja nepostojećeg indeksa mjeseca:", newIndex);
-        return;
-      }
+    const [year, month] = availableMonths[currentMonthIndex].split('-');
+    currentYear = parseInt(year);
+    currentMonth = parseInt(month) - 1;
 
+    // Ponovno učitaj podatke za novi mjesec
     await loadData();
     updateNavigationButtons();
   };
 
+  // Onemogućuje/omogućuje gumbe za navigaciju
   function updateNavigationButtons() {
     const prevButton = document.querySelector('.month-selector button:first-child');
     const nextButton = document.querySelector('.month-selector button:last-child');
 
     if (!prevButton || !nextButton) return;
 
-    if (availableMonths.length <= 1) {
-      prevButton.disabled = true;
-      nextButton.disabled = true;
-    } else {
-       // availableMonths je sortiran DESC (najnoviji prvi)
-      prevButton.disabled = currentMonthIndex === 0;
-      nextButton.disabled = currentMonthIndex === availableMonths.length - 1;
-    }
+    // Onemogući "Prethodni" ako smo na najstarijem mjesecu
+    prevButton.disabled = currentMonthIndex === 0;
+    // Onemogući "Sljedeći" ako smo na najnovijem mjesecu
+    nextButton.disabled = currentMonthIndex === availableMonths.length - 1;
 
+    // Vizualni stil za onemogućene gumbe
     prevButton.style.opacity = prevButton.disabled ? '0.5' : '1';
     prevButton.style.cursor = prevButton.disabled ? 'not-allowed' : 'pointer';
     nextButton.style.opacity = nextButton.disabled ? '0.5' : '1';
     nextButton.style.cursor = nextButton.disabled ? 'not-allowed' : 'pointer';
   }
 
+  // Dohvaća sve mjesece za koje postoje transakcije
   async function loadAvailableMonths() {
     try {
       const response = await fetch(`/income/transactions/months?user_id=${localStorage.getItem('userId')}`, {
         headers: getAuthHeader()
       });
-
-      if (!response.ok) {
-        let errorMsg = 'Greška pri dohvaćanju dostupnih mjeseci';
-        try {
-            const errorData = await response.json();
-            errorMsg = errorData.error || errorMsg;
-        } catch (e) { /* Ignoriraj ako tijelo nije JSON */ }
-        throw new Error(errorMsg);
-      }
-
+      if (!response.ok) throw new Error('Greška pri dohvaćanju dostupnih mjeseci');
+      
       availableMonths = await response.json();
-      // Sortiranje se sada radi nakon dohvaćanja, prije postavljanja indeksa
+      // Sortiraj mjesece kronološki, npr. ['2025-03', '2025-04', '2025-05']
+      availableMonths.sort((a, b) => a.localeCompare(b));
       
     } catch (error) {
       console.error('Greška u loadAvailableMonths:', error);
-      showAlert(`Greška u dohvaćanju mjeseci: ${error.message}`, 'error');
+      showAlert(error.message, 'error');
       availableMonths = [];
     }
   }
 
+  // Glavna funkcija za dohvaćanje i prikaz podataka
   async function loadData() {
     try {
       updateMonthDisplay();
       const monthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+      const comparisonMonthStr = getComparisonMonthString();
 
-      const previousMonthStr = getPreviousMonthString();
-
+      // Paralelno dohvaćanje svih potrebnih podataka
       const [incomesRes, expensesRes, budgetsRes, prevMonthRes] = await Promise.all([
-        fetch(`/income?user_id=${localStorage.getItem('userId')}&month=${monthString}`, {
-          headers: getAuthHeader()
-        }),
-        fetch(`/expenses?user_id=${localStorage.getItem('userId')}&month=${monthString}`, {
-          headers: getAuthHeader()
-        }),
-        fetch(`/budgets?user_id=${localStorage.getItem('userId')}&month=${monthString}`, {
-          headers: getAuthHeader()
-        }),
-        // Dohvat sažetka za prethodni mjesec (ako postoji)
-        previousMonthStr ? fetch(`/income/summary?user_id=${localStorage.getItem('userId')}&month=${previousMonthStr}`, {
-          headers: getAuthHeader()
-        }) : Promise.resolve(new Response(JSON.stringify({ income: 0, expenses: 0, balance: 0 }), { status: 200 }))
+        fetch(`/income?user_id=${localStorage.getItem('userId')}&month=${monthString}`, { headers: getAuthHeader() }),
+        fetch(`/expenses?user_id=${localStorage.getItem('userId')}&month=${monthString}`, { headers: getAuthHeader() }),
+        fetch(`/budgets?user_id=${localStorage.getItem('userId')}&month=${monthString}`, { headers: getAuthHeader() }),
+        comparisonMonthStr ? fetch(`/income/summary?user_id=${localStorage.getItem('userId')}&month=${comparisonMonthStr}`, { headers: getAuthHeader() }) : Promise.resolve(null)
       ]);
 
+      // Provjera odgovora sa servera
       if (!incomesRes.ok) throw new Error(`Greška pri dohvaćanju prihoda: ${incomesRes.statusText}`);
       if (!expensesRes.ok) throw new Error(`Greška pri dohvaćanju troškova: ${expensesRes.statusText}`);
 
+      const incomes = await incomesRes.json();
+      const expenses = await expensesRes.json();
+      
       let budgets = [];
-      if (budgetsRes.ok) {
-        budgets = await budgetsRes.json();
-      } else {
-        console.warn(`Greška pri dohvaćanju budžeta: ${budgetsRes.statusText}`);
-      }
+      if (budgetsRes.ok) budgets = await budgetsRes.json();
+      else console.warn(`Greška pri dohvaćanju budžeta: ${budgetsRes.statusText}`);
       
       previousMonthData = { income: 0, expenses: 0, balance: 0 };
       if (prevMonthRes && prevMonthRes.ok) {
         previousMonthData = await prevMonthRes.json();
-      } else {
-         console.warn("Nema podataka za prethodni mjesec.");
+      } else if (comparisonMonthStr) {
+         console.warn("Nema podataka za prethodni mjesec za usporedbu.");
       }
       
-      const incomes = await incomesRes.json();
-      const expenses = await expensesRes.json();
-
+      // Izračun sažetka
       const totalIncome = incomes.reduce((sum, inc) => sum + parseFloat(inc.amount || 0), 0);
       const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
       const balance = totalIncome - totalExpenses;
 
+      // Prikaz sažetka na karticama
       document.getElementById('totalIncome').textContent = totalIncome.toFixed(2) + ' €';
       document.getElementById('totalExpenses').textContent = totalExpenses.toFixed(2) + ' €';
       document.getElementById('balance').textContent = balance.toFixed(2) + ' €';
 
-      const prevBalance = previousMonthData ? previousMonthData.balance : 0;
+      const prevBalance = previousMonthData.balance || 0;
       const balanceChange = balance - prevBalance;
       const balanceChangeElement = document.getElementById('balanceChange');
-      if (balanceChangeElement) {
+      
+      if (balanceChangeElement && comparisonMonthStr) {
         if (balanceChange >= 0) {
             balanceChangeElement.innerHTML = `<span style="color: green">↑ ${balanceChange.toFixed(2)} €</span> u odnosu na prethodni mjesec`;
         } else {
             balanceChangeElement.innerHTML = `<span style="color: red">↓ ${Math.abs(balanceChange).toFixed(2)} €</span> u odnosu na prethodni mjesec`;
         }
+      } else if (balanceChangeElement) {
+        balanceChangeElement.innerHTML = 'Nema podataka za usporedbu.';
       }
 
+      // Crtanje svih grafova
       createFinanceChart(totalIncome, totalExpenses, balance);
-      createBudgetChart(expenses, budgets); // Sada prima ispravno filtrirane budžete
+      createBudgetChart(expenses, budgets);
       createCategoriesChart(expenses);
 
     } catch (error) {
@@ -183,31 +169,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-
-  function getPreviousMonthString() {
-    const prevIndex = currentMonthIndex + 1; // Jer je sortirano DESC
-    if (prevIndex < availableMonths.length) {
-        return availableMonths[prevIndex];
+  // Pomoćna funkcija za dohvaćanje stringa prethodnog mjeseca
+  function getComparisonMonthString() {
+    if (currentMonthIndex > 0) {
+        return availableMonths[currentMonthIndex - 1];
     }
-    return null; // Nema prethodnog mjeseca u podacima
+    return null; 
   }
 
+  // Ažurira prikaz naziva mjeseca i godine
   function updateMonthDisplay() {
     const monthNames = ["Siječanj", "Veljača", "Ožujak", "Travanj", "Svibanj", "Lipanj", "Srpanj", "Kolovoz", "Rujan", "Listopad", "Studeni", "Prosinac"];
-    const displayElement = document.getElementById('currentMonth');
-    if (displayElement) {
-      displayElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-    }
+    document.getElementById('currentMonth').textContent = `${monthNames[currentMonth]} ${currentYear}`;
   }
+
+  // --- FUNKCIJE ZA CRTANJE GRAFOVA ---
 
   function createFinanceChart(totalIncome, totalExpenses, balance) {
     const ctx = document.getElementById('financeChart')?.getContext('2d');
     if (!ctx) return;
-
-    if (financeChart) {
-      financeChart.destroy();
-    }
-
+    if (financeChart) financeChart.destroy();
     financeChart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -215,74 +196,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         datasets: [{
           label: 'Financijski pregled',
           data: [totalIncome, totalExpenses, balance],
-          backgroundColor: [
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(54, 162, 235, 0.6)'
-          ],
+          backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)'],
           borderWidth: 1
         }]
       },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
     });
   }
 
   function createBudgetChart(expenses, budgets) {
     const container = document.getElementById('budgetChart').parentElement;
     if (!container) return;
+    if (budgetChart) budgetChart.destroy();
     
-    // Uništi stari graf ako postoji
-    if (budgetChart) {
-        budgetChart.destroy();
-        budgetChart = null;
-    }
-    
-    // *** ISPRAVAK START ***
-    // 1. Uklonjena je nepotrebna i neispravna linija za filtriranje:
-    // budgets = budgets.filter(b => b.month === monthString);
-    // Jer backend sada šalje ispravno filtrirane podatke.
-
-    // 2. Poboljšana logika za prikaz poruke ili grafa.
+    // Ako nema podataka, prikaži poruku
     if (!Array.isArray(budgets) || budgets.length === 0) {
-        // Ako nema budžeta, prikaži poruku i sakrij canvas
-        container.innerHTML = `
-            <h2>Pregled budžeta</h2>
-            <p>Niste postavili budžete za ovaj mjesec. <a href="budgets.html">Postavite budžete</a> za bolju kontrolu troškova.</p>
-            <canvas id="budgetChart" style="display: none;"></canvas> 
-        `;
+        container.innerHTML = `<h2>Pregled budžeta</h2><p>Niste postavili budžete za ovaj mjesec. <a href="budgets.html">Postavite budžete</a> za bolju kontrolu troškova.</p><canvas id="budgetChart" style="display: none;"></canvas>`;
         return; 
     }
     
-    // Ako ima budžeta, osiguraj da je canvas vidljiv i da nema poruke
-    // Ovo je važno ako korisnik dođe s mjeseca bez budžeta na mjesec s budžetima
+    // Ako podaci postoje, osiguraj da je canvas vidljiv
     if (!container.querySelector('canvas') || container.querySelector('canvas').style.display === 'none') {
-        container.innerHTML = `
-            <h2>Pregled budžeta</h2>
-            <canvas id="budgetChart"></canvas>
-        `;
+        container.innerHTML = `<h2>Pregled budžeta</h2><canvas id="budgetChart"></canvas>`;
     }
-    
     const ctx = document.getElementById('budgetChart').getContext('2d');
-    // *** ISPRAVAK END ***
 
-    const expensesByCategory = {};
-    expenses.forEach(exp => {
-      if (!exp.category) return;
-      if (!expensesByCategory[exp.category]) {
-        expensesByCategory[exp.category] = 0;
-      }
-      expensesByCategory[exp.category] += parseFloat(exp.amount || 0);
-    });
+    // Priprema podataka za graf
+    const expensesByCategory = expenses.reduce((acc, exp) => {
+      if(exp.category) acc[exp.category] = (acc[exp.category] || 0) + parseFloat(exp.amount || 0);
+      return acc;
+    }, {});
 
     const categories = budgets.map(b => b.category);
     const budgetAmounts = budgets.map(b => parseFloat(b.amount || 0));
     const actualAmounts = categories.map(cat => expensesByCategory[cat] || 0);
 
+    // Crtanje grafa
     budgetChart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -297,24 +246,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           backgroundColor: 'rgba(255, 99, 132, 0.6)'
         }]
       },
-      options: {
-        responsive: true,
-        scales: {
-          x: { stacked: false },
-          y: { beginAtZero: true, stacked: false }
-        }
-      }
+      options: { responsive: true, scales: { x: { stacked: false }, y: { beginAtZero: true, stacked: false } } }
     });
   }
 
   function createCategoriesChart(expenses) {
-     const container = document.getElementById('categoriesChart').parentElement;
+    const container = document.getElementById('categoriesChart').parentElement;
     if (!container) return;
-
-    if (categoriesChart) {
-      categoriesChart.destroy();
-      categoriesChart = null;
-    }
+    if (categoriesChart) categoriesChart.destroy();
     
     if (!Array.isArray(expenses) || expenses.length === 0) {
         container.innerHTML = `<h2>Troškovi po kategorijama</h2><p>Nema troškova za prikaz u ovom mjesecu.</p><canvas id="categoriesChart" style="display: none;"></canvas>`;
@@ -324,170 +263,120 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!container.querySelector('canvas') || container.querySelector('canvas').style.display === 'none') {
         container.innerHTML = `<h2>Troškovi po kategorijama</h2><canvas id="categoriesChart"></canvas>`;
     }
-    
     const ctx = document.getElementById('categoriesChart').getContext('2d');
-
-    const categories = {};
-    expenses.forEach(exp => {
-      if (!exp.category) return;
-      if (!categories[exp.category]) {
-        categories[exp.category] = 0;
-      }
-      categories[exp.category] += parseFloat(exp.amount || 0);
-    });
+    
+    const categories = expenses.reduce((acc, exp) => {
+      if(exp.category) acc[exp.category] = (acc[exp.category] || 0) + parseFloat(exp.amount || 0);
+      return acc;
+    }, {});
 
     const labels = Object.keys(categories);
     const amounts = Object.values(categories);
-
-    const backgroundColors = labels.length <= 10
-      ? ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#E7E9ED', '#8DDF3C', '#F67019']
-      : labels.map((_, index) => `hsl(${(index * 36)}deg, 70%, 60%)`);
+    // Dinamičko generiranje boja za onoliko kategorija koliko ih ima
+    const backgroundColors = labels.map((_, i) => `hsl(${(i * 45)}deg, 70%, 60%)`);
 
     categoriesChart = new Chart(ctx, {
       type: 'pie',
       data: {
         labels: labels,
-        datasets: [{
-          data: amounts,
-          backgroundColor: backgroundColors,
-        }]
+        datasets: [{ data: amounts, backgroundColor: backgroundColors }]
       },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'right',
-          }
-        }
-      }
+      options: { responsive: true, plugins: { legend: { position: 'right' } } }
     });
   }
 
-  // --- Modal i ostale funkcije ostaju uglavnom iste ---
+  // --- FUNKCIJE ZA MODAL I AUTENTIKACIJU ---
 
   window.showMonthlyComparison = async function() {
     try {
-      const response = await fetch(`/income/transactions/comparison?user_id=${localStorage.getItem('userId')}`, {
-        headers: getAuthHeader()
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Nepoznata greška servera");
-        console.error("Server vratio grešku za usporedbu:", response.status, errorText);
-        throw new Error('Greška pri dohvaćanju podataka za usporedbu');
-      }
-
+      const response = await fetch(`/income/transactions/comparison?user_id=${localStorage.getItem('userId')}`, { headers: getAuthHeader() });
+      if (!response.ok) throw new Error('Greška pri dohvaćanju podataka za usporedbu');
+      
       let comparisonData = await response.json();
-
-      if (!Array.isArray(comparisonData) || comparisonData.length === 0) {
+      // Potrebna su barem dva mjeseca za usporedbu
+      if (!Array.isArray(comparisonData) || comparisonData.length < 2) {
         showAlert("Nema dovoljno podataka za mjesečnu usporedbu.", "info");
         return;
       }
       
-      // Sortiraj podatke po mjesecima (ASC) za ispravan prikaz na grafu
       comparisonData.sort((a,b) => a.month.localeCompare(b.month));
 
       const labels = comparisonData.map(item => {
-        if (typeof item.month !== 'string' || !item.month.includes('-')) return 'N/A';
         const [year, month] = item.month.split('-');
-        const monthNames = ["Sij", "Velj", "Ožu", "Tra", "Svi", "Lip", "Srp", "Kol", "Ruj", "Lis", "Stu", "Pro"];
-        const monthIndex = parseInt(month) - 1;
-        if (monthIndex >= 0 && monthIndex < 12 && year && year.length === 4) {
-          return `${monthNames[monthIndex]} '${year.substring(2)}`;
-        }
-        return item.month;
+        return new Date(year, month - 1).toLocaleString('hr-HR', { month: 'short', year: 'numeric' });
       });
 
       const incomeData = comparisonData.map(item => item.income || 0);
       const expensesData = comparisonData.map(item => item.expenses || 0);
 
-      const modalElement = document.getElementById('comparisonModal');
-      const canvasElement = document.getElementById('comparisonChart');
-      if (!modalElement || !canvasElement) return;
-      const ctx = canvasElement.getContext('2d');
-
-      if (comparisonChart) {
-        comparisonChart.destroy();
-      }
+      const modal = document.getElementById('comparisonModal');
+      const ctx = document.getElementById('comparisonChart').getContext('2d');
+      if (comparisonChart) comparisonChart.destroy();
 
       comparisonChart = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: labels,
+          labels,
           datasets: [{
             label: 'Prihodi',
             data: incomeData,
-            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
+            backgroundColor: 'rgba(75, 192, 192, 0.6)'
           }, {
             label: 'Troškovi',
             data: expensesData,
-            backgroundColor: 'rgba(255, 99, 132, 0.6)',
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1
+            backgroundColor: 'rgba(255, 99, 132, 0.6)'
           }]
         },
         options: {
           responsive: true,
-          scales: {
-            y: { beginAtZero: true }
-          },
-          plugins: {
-            title: {
-              display: true,
-              text: 'Mjesečna usporedba prihoda i troškova'
-            }
-          }
+          scales: { y: { beginAtZero: true } },
+          plugins: { title: { display: true, text: 'Mjesečna usporedba prihoda i troškova' } }
         }
       });
-
-      modalElement.style.display = 'block';
+      modal.style.display = 'block';
     } catch (error) {
-      console.error('Greška u showMonthlyComparison:', error);
+      console.error('Greška kod prikaza usporedbe:', error);
       showAlert(`Greška pri učitavanju usporedbe: ${error.message}`, 'error');
     }
   };
 
   window.hideComparisonModal = function() {
-    const modalElement = document.getElementById('comparisonModal');
-    if (modalElement) {
-      modalElement.style.display = 'none';
-    }
+    document.getElementById('comparisonModal').style.display = 'none';
   };
   
-  // Nije bilo checkAuth i getAuthHeader funkcija, dodajem osnovne verzije
+  // Pomoćne funkcije koje bi trebale biti u auth.js, ali ih dodajemo ovdje za potpunost
   function checkAuth() {
     const token = localStorage.getItem('token');
     if (!token) {
-        window.location.href = 'index.html';
+        console.warn("Korisnik nije prijavljen, preusmjeravanje na početnu stranicu.");
+        // window.location.href = 'index.html'; // Odkomentirati u produkciji
         return false;
     }
     return true;
   }
   
   function getAuthHeader() {
-    return {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-    };
+    return { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
   }
   
   function showAlert(message, type='error') {
-     // Izbjegavaj stvaranje puno alert boxova, koristi jedan ako je moguće
     let alertBox = document.querySelector('.alert-box');
     if (!alertBox) {
         alertBox = document.createElement('div');
-        alertBox.className = 'alert-box';
+        alertBox.style.position = 'fixed';
+        alertBox.style.top = '20px';
+        alertBox.style.right = '20px';
+        alertBox.style.padding = '15px';
+        alertBox.style.borderRadius = '5px';
+        alertBox.style.color = 'white';
+        alertBox.style.zIndex = '1001';
+        alertBox.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
         document.body.appendChild(alertBox);
     }
-    
     alertBox.className = `alert-box alert-${type}`;
+    alertBox.style.backgroundColor = type === 'error' ? '#dc3545' : (type === 'info' ? '#17a2b8' : '#28a745');
     alertBox.textContent = message;
     alertBox.style.display = 'block';
-
-    setTimeout(() => {
-        alertBox.style.display = 'none';
-    }, 5000);
+    setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
   }
-
 });

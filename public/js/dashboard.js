@@ -271,83 +271,67 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
   function createBudgetChart(expenses, budgets) {
-    const ctx = document.getElementById('budgetChart')?.getContext('2d');
-    if (!ctx) return;
+    const ctx = document.getElementById('budgetChart')?.getContext('2d'); // Dodao ?.
+     if (!ctx) return; // Dodao provjeru
 
     if (budgetChart) {
-        budgetChart.destroy();
+      budgetChart.destroy();
     }
-
-    // Filter budgets for current month
     const monthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-    budgets = budgets.filter(b => b.month === monthString);
+    budgets = budgets.filter(b => {
+  	const normalized = b.month?.substring(0, 7); // npr. "2025-06-01" → "2025-06"
+  	return normalized === monthString;
+    });
 
-    // Check if there are any budgets for this month
-    if (!Array.isArray(budgets) || budgets.length === 0) {
-        const parentElement = document.getElementById('budgetChart')?.parentElement;
-        if(parentElement){
+
+     // Tvoja originalna provjera za prazne budžete
+    if (!Array.isArray(budgets) || budgets.length === 0) { // Dodao provjeru da je niz
+       // Tvoja originalna logika za prikaz poruke unutar parent elementa canvasa
+       const parentElement = document.getElementById('budgetChart')?.parentElement;
+       if(parentElement){
             parentElement.innerHTML = `
                 <h2>Pregled budžeta</h2>
                 <p>Niste postavili budžete. <a href="budgets.html">Postavite budžete</a> za bolju kontrolu troškova.</p>
             `;
-        }
-        return;
+       } else {
+           console.error("Nije pronađen parent element za budgetChart za prikaz poruke.");
+       }
+       // Osiguraj da se graf ne crta ako nema podataka
+       if (budgetChart) budgetChart.destroy(); budgetChart = null;
+       // Sakrij canvas ako postoji
+       const canvasElement = document.getElementById('budgetChart');
+       if (canvasElement) canvasElement.style.display = 'none';
+      return; // Važno da izađeš iz funkcije
     } else {
-        // Restore the chart container if it was replaced with a message
-        const parentElement = document.getElementById('budgetChart')?.parentElement;
-        if(parentElement && !parentElement.querySelector('canvas')){
-            parentElement.innerHTML = `<h2>Pregled budžeta</h2><canvas id="budgetChart"></canvas>`;
-            // Get the new context after restoring the canvas
-            const newCtx = document.getElementById('budgetChart')?.getContext('2d');
-            if(!newCtx) return;
-            ctx = newCtx;
-        }
+         // Ako ima budžeta, osiguraj da je canvas vidljiv (ako je prethodno bio skriven)
+         const canvasElement = document.getElementById('budgetChart');
+         if (canvasElement) canvasElement.style.display = 'block';
+         // Ako je poruka bila prikazana, treba je maknuti ili osigurati da se naslov vrati
+         const parentElement = document.getElementById('budgetChart')?.parentElement;
+          if(parentElement && !parentElement.querySelector('canvas')){ // Ako canvas fali
+             parentElement.innerHTML = `<h2>Pregled budžeta</h2><canvas id="budgetChart"></canvas>`; // Vrati canvas i naslov
+             // Treba ponovno dohvatiti context!
+             const newCtx = document.getElementById('budgetChart')?.getContext('2d');
+             if(!newCtx) return; // Izađi ako ni sad nema contexta
+             // ctx = newCtx; // Ovo ne radi jer je ctx const, treba refaktorirati ili ponoviti dohvat
+             // Najjednostavnije je samo ponovno dohvatiti context ako je parentElement bio resetiran
+             const ctx = document.getElementById('budgetChart')?.getContext('2d');
+             if (!ctx) return;
+
+          } else if (parentElement && parentElement.querySelector('p')) {
+              // Ako postoji samo paragraf s porukom, ukloni ga
+              const pMessage = parentElement.querySelector('p');
+              if(pMessage && pMessage.textContent.includes("Niste postavili budžete")) pMessage.remove();
+               // Vrati naslov ako fali
+              if (!parentElement.querySelector('h2')) {
+                  const title = document.createElement('h2');
+                  title.textContent = 'Pregled budžeta';
+                   if(canvasElement) parentElement.insertBefore(title, canvasElement); else parentElement.prepend(title);
+              }
+          }
     }
-
-    // Group expenses by category
-    const expensesByCategory = {};
-    expenses.forEach(exp => {
-        if (!exp.category) return;
-        if (!expensesByCategory[exp.category]) {
-            expensesByCategory[exp.category] = 0;
-        }
-        expensesByCategory[exp.category] += parseFloat(exp.amount || 0);
-    });
-
-    // Prepare data for the chart
-    const categories = budgets.map(b => b.category);
-    const budgetAmounts = budgets.map(b => parseFloat(b.amount || 0));
-    const actualAmounts = categories.map(cat => expensesByCategory[cat] || 0);
-
-    // Create the chart
-    budgetChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: categories,
-            datasets: [
-                {
-                    label: 'Budžet',
-                    data: budgetAmounts,
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                },
-                {
-                    label: 'Stvarni troškovi',
-                    data: actualAmounts,
-                    backgroundColor: 'rgba(255, 99, 132, 0.6)'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
-}
-
-
 
 
 
@@ -613,3 +597,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
 });
+

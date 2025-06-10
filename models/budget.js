@@ -10,12 +10,12 @@ const Budget = {
   },
 
   async findByUserId(userId) {
-    const [rows] = await db.execute(
-      'SELECT * FROM budgets WHERE user_id = ? ORDER BY month DESC, category',
-      [userId]
-    );
-    return rows;
-  },
+  const [rows] = await db.execute(
+    'SELECT * FROM budgets WHERE user_id = ? ORDER BY month DESC, category',
+    [userId]
+  );
+  return rows;
+},
 
   async update(id, userId, amount) {
     const [result] = await db.execute(
@@ -34,12 +34,13 @@ const Budget = {
   },
 
   async getByMonth(userId, month) {
-    const [rows] = await db.execute(
-      'SELECT * FROM budgets WHERE user_id = ? AND DATE_FORMAT(month, "%Y-%m") = ?',
-      [userId, month]
-    );
-    return rows;
-  }
+  // Poboljšan SQL upit za filtriranje po mjesecu
+  const [rows] = await db.execute(
+    'SELECT * FROM budgets WHERE user_id = ? AND month = ? ORDER BY category',
+    [userId, month]
+  );
+  return rows;
+}
 };
 
 module.exports = Budget;

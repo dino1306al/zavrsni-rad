@@ -7,61 +7,68 @@ const { authenticate } = require('./users');
 router.get('/', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { month } = req.query; // Dohvaćamo 'month' iz query parametara (npr. '2025-04')
+    const { month } = req.query; 
 
     let budgets;
-
-    // *** ISPRAVAK START ***
-    // Ako je 'month' parametar poslan, filtriramo rezultate po mjesecu.
-    // Ako nije, vraćamo sve budžete kao i prije.
     if (month) {
-      // Koristimo postojeću funkciju 'getByMonth' iz modela koja ispravno filtrira bazu
       budgets = await Budget.getByMonth(userId, month);
     } else {
-      // Staro ponašanje, ako zatreba negdje drugdje
       budgets = await Budget.findByUserId(userId);
     }
-    // *** ISPRAVAK END ***
-
     res.json(budgets);
   } catch (err) {
     console.error('Greška pri dohvaćanju budžeta:', err);
-    res.status(500).json({ error: 'Greška na serveru' });
+    res.status(500).json({ message: 'Greška na serveru' });
   }
 });
 
-// Dodaj novi budžet
+// *** AŽURIRANA RUTA ZA DODAVANJE NOVOG BUDŽETA ***
 router.post('/', authenticate, async (req, res) => {
   try {
     const { category, amount, month } = req.body;
     
+    // Provjera jesu li sva polja prisutna
     if (!category || !amount || !month) {
-      return res.status(400).json({ error: 'Sva polja su obavezna' });
+      return res.status(400).json({ message: 'Sva polja su obavezna: kategorija, iznos i mjesec.' });
     }
 
+    // 1. PROVJERA POSTOJI LI VEĆ BUDŽET
+    // Koristimo novu funkciju iz modela
+    const existingBudget = await Budget.findByCategoryAndMonth(req.user.id, category, month);
+
+    if (existingBudget) {
+      // Ako budžet postoji, vraćamo grešku 409 Conflict s jasnom porukom
+      return res.status(409).json({ 
+        message: `Budžet za kategoriju "${category}" već postoji za odabrani mjesec. Možete ga urediti na postojećoj listi.` 
+      });
+    }
+
+    // 2. AKO NE POSTOJI, KREIRAMO NOVI
     await Budget.create(req.user.id, category, amount, month);
-    res.status(201).json({ message: 'Budžet uspješno dodan!' }); // Koristimo 201 Created status
+    res.status(201).json({ message: 'Budžet uspješno dodan!' });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Greška na serveru' });
+    console.error('Greška kod kreiranja budžeta:', err);
+    res.status(500).json({ message: 'Došlo je do greške na serveru prilikom dodavanja budžeta.' });
   }
 });
+// *** KRAJ AŽURIRANE RUTE ***
 
 // Ažuriraj budžet
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { amount } = req.body;
     if (!amount) {
-        return res.status(400).json({ error: 'Iznos je obavezan' });
+        return res.status(400).json({ message: 'Iznos je obavezan' });
     }
     const result = await Budget.update(req.params.id, req.user.id, amount);
     if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Budžet nije pronađen ili nemate dozvolu za izmjenu.' });
+        return res.status(404).json({ message: 'Budžet nije pronađen ili nemate dozvolu za izmjenu.' });
     }
     res.json({ message: 'Budžet ažuriran!' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Greška na serveru' });
+    console.error('Greška kod ažuriranja budžeta:', err);
+    res.status(500).json({ message: 'Greška na serveru' });
   }
 });
 
@@ -70,12 +77,12 @@ router.delete('/:id', authenticate, async (req, res) => {
   try {
     const result = await Budget.deleteById(req.params.id, req.user.id);
     if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Budžet nije pronađen ili nemate dozvolu za brisanje.' });
+        return res.status(404).json({ message: 'Budžet nije pronađen ili nemate dozvolu za brisanje.' });
     }
     res.json({ message: 'Budžet obrisan!' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Greška na serveru' });
+    console.error('Greška kod brisanja budžeta:', err);
+    res.status(500).json({ message: 'Greška na serveru' });
   }
 });
 

@@ -33,13 +33,13 @@ const Budget = {
     return result;
   },
 
-  async getByMonth(userId, month) {
-    const [rows] = await db.execute(
-      'SELECT * FROM budgets WHERE user_id = ? AND month = ?',
-      [userId, month]
-    );
-    return rows;
-  }
-};
+async getByMonth(userId, month) {
+  const [rows] = await db.execute(
+    'SELECT * FROM budgets WHERE user_id = ? AND DATE_FORMAT(month, "%Y-%m") = ?',
+    [userId, month]
+  );
+  return rows;
+}
+
 
 module.exports = Budget;

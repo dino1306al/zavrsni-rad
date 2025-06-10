@@ -16,6 +16,18 @@ const Budget = {
     );
     return rows;
   },
+  
+  // *** DODANA NOVA FUNKCIJA ***
+  // Pronalazi budžet za određenog korisnika, kategoriju i mjesec.
+  // Koristimo je da spriječimo unos duplikata.
+  async findByCategoryAndMonth(userId, category, month) {
+    const [rows] = await db.execute(
+        'SELECT * FROM budgets WHERE user_id = ? AND category = ? AND DATE_FORMAT(month, "%Y-%m") = ?',
+        [userId, category, month]
+    );
+    return rows[0]; // Vraća prvi pronađeni red, ili undefined ako ne postoji.
+  },
+  // *** KRAJ NOVE FUNKCIJE ***
 
   async update(id, userId, amount) {
     const [result] = await db.execute(

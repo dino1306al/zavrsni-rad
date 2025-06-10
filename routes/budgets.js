@@ -4,9 +4,20 @@ const Budget = require('../models/budget');
 const { authenticate } = require('./users');
 
 // Dohvati sve budžete za korisnika
+// Dohvati budžete za korisnika s mogućnošću filtriranja po mjesecu
 router.get('/', authenticate, async (req, res) => {
   try {
-    const budgets = await Budget.findByUserId(req.user.id);
+    const { month } = req.query;
+    let budgets;
+    
+    if (month) {
+      // Ako je naveden month parametar, filtriraj po mjesecu
+      budgets = await Budget.getByMonth(req.user.id, month);
+    } else {
+      // Inače dohvati sve budžete
+      budgets = await Budget.findByUserId(req.user.id);
+    }
+    
     res.json(budgets);
   } catch (err) {
     console.error(err);

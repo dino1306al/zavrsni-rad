@@ -3,10 +3,20 @@ const router = express.Router();
 const Budget = require('../models/budget');
 const { authenticate } = require('./users');
 
-// Dohvati sve budžete za korisnika
+// Dohvati budžete (s podrškom za filtriranje po mjesecu)
 router.get('/', authenticate, async (req, res) => {
   try {
-    const budgets = await Budget.findByUserId(req.user.id);
+    const userId = req.user.id;
+    const { month } = req.query;
+
+    if (month) {
+      // Ako je poslan ?month=YYYY-MM → dohvaćamo samo taj mjesec
+      const budgets = await Budget.getByMonth(userId, month);
+      return res.json(budgets);
+    }
+
+    // Inače vratimo sve budžete korisnika
+    const budgets = await Budget.findByUserId(userId);
     res.json(budgets);
   } catch (err) {
     console.error(err);
@@ -18,7 +28,7 @@ router.get('/', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { category, amount, month } = req.body;
-    
+
     if (!category || !amount || !month) {
       return res.status(400).json({ error: 'Sva polja su obavezna' });
     }

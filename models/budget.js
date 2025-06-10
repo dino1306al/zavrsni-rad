@@ -39,7 +39,7 @@ async getByMonth(userId, month) {
     [userId, month]
   );
   return rows;
-}
+};
 
 
 module.exports = Budget;
